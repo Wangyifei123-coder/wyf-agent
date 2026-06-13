@@ -2,21 +2,28 @@
 
 from __future__ import annotations
 
+import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import structlog
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 from .gateway.client import LLMClient, LLMConfig
-from .gateway.router import ModelRouter
 from .memory.manager import MemoryManager
 from .observability.logger import setup_logging
 from .observability.tracer import Tracer
 from .reasoning.react import ReActEngine
 from .safety.guard import SafetyGuard
 from .tools.registry import ToolRegistry
+
+_env_path = Path(__file__).parent.parent / "config" / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
 
 logger = structlog.get_logger(__name__)
 
@@ -28,12 +35,17 @@ tracer: Tracer | None = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     global llm_client, react_engine, memory_manager, safety_guard, tracer
 
-    setup_logging(level="INFO", format="json")
+    setup_logging(level=os.getenv("LOG_LEVEL", "INFO"), format="json")
 
-    config = LLMConfig()
+    config = LLMConfig(
+        primary_model=os.getenv("LLM_PRIMARY_MODEL", "anthropic/mimo-v2.5-pro"),
+        fallback_model=os.getenv("LLM_FALLBACK_MODEL", "anthropic/mimo-v2.5-pro"),
+        api_base=os.getenv("ANTHROPIC_API_BASE", ""),
+        api_key=os.getenv("ANTHROPIC_API_KEY", ""),
+    )
     llm_client = LLMClient(config)
     memory_manager = MemoryManager()
     safety_guard = SafetyGuard()
@@ -96,7 +108,7 @@ async def metrics() -> dict[str, Any]:
     }
 
 
-def main():
+def main() -> None:
     import uvicorn
 
     uvicorn.run("src.api:app", host="0.0.0.0", port=8080, reload=True)

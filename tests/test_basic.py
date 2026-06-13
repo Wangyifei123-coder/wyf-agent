@@ -32,8 +32,8 @@ class TestSafetyGuard:
 class TestTokenCounter:
     def test_record_and_summary(self):
         counter = TokenCounter()
-        counter.record("gpt-4o", 100, 50)
-        counter.record("gpt-4o", 200, 100)
+        counter.record("anthropic/mimo-v2.5-pro", 100, 50)
+        counter.record("anthropic/mimo-v2.5-pro", 200, 100)
         assert counter.total_input_tokens == 300
         assert counter.total_output_tokens == 150
         assert counter.total_cost > 0

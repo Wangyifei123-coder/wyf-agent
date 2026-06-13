@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
 
 import structlog
 
@@ -18,14 +18,16 @@ class LLMResponse:
     content: str
     model: str
     usage: dict[str, int]
-    latency_ms: float
+    latency_ms: float = 0.0
     finish_reason: str = "stop"
 
 
 @dataclass
 class LLMConfig:
-    primary_model: str = "gpt-4o"
-    fallback_model: str = "claude-sonnet-4-20250514"
+    primary_model: str = "anthropic/mimo-v2.5-pro"
+    fallback_model: str = "anthropic/mimo-v2.5-pro"
+    api_base: str = ""
+    api_key: str = ""
     max_tokens: int = 4096
     temperature: float = 0.1
     timeout: int = 30
@@ -77,8 +79,15 @@ class LLMClient:
                     attempt=attempt + 1,
                     error=str(e),
                 )
-                if attempt == self.config.max_retries - 1 and target_model != self.config.fallback_model:
-                    logger.info("llm_fallback", from_model=target_model, to_model=self.config.fallback_model)
+                if (
+                    attempt == self.config.max_retries - 1
+                    and target_model != self.config.fallback_model
+                ):
+                    logger.info(
+                        "llm_fallback",
+                        from_model=target_model,
+                        to_model=self.config.fallback_model,
+                    )
                     target_model = self.config.fallback_model
                     attempt = -1
 
@@ -93,13 +102,19 @@ class LLMClient:
     ) -> LLMResponse:
         import litellm
 
-        response = await litellm.acompletion(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            timeout=self.config.timeout,
-        )
+        kwargs: dict[str, object] = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "timeout": self.config.timeout,
+        }
+        if self.config.api_base:
+            kwargs["api_base"] = self.config.api_base
+        if self.config.api_key:
+            kwargs["api_key"] = self.config.api_key
+
+        response = await litellm.acompletion(**kwargs)
 
         return LLMResponse(
             content=response.choices[0].message.content or "",
@@ -121,13 +136,18 @@ class LLMClient:
         import litellm
 
         target_model = model or self.config.primary_model
-        response = await litellm.acompletion(
-            model=target_model,
-            messages=messages,
-            temperature=self.config.temperature,
-            max_tokens=self.config.max_tokens,
-            stream=True,
-        )
+        kwargs: dict[str, object] = {
+            "model": target_model,
+            "messages": messages,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+            "stream": True,
+        }
+        if self.config.api_base:
+            kwargs["api_base"] = self.config.api_base
+        if self.config.api_key:
+            kwargs["api_key"] = self.config.api_key
+        response = await litellm.acompletion(**kwargs)
 
         async for chunk in response:
             delta = chunk.choices[0].delta.content

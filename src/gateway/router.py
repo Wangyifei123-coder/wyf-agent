@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class TaskType(str, Enum):
+class TaskType(StrEnum):
     CHAT = "chat"
     CODE = "code"
     REASONING = "reasoning"
@@ -25,15 +25,11 @@ class ModelProfile:
 
 DEFAULT_PROFILES: list[ModelProfile] = [
     ModelProfile(
-        model="gpt-4o",
-        strengths=[TaskType.CHAT, TaskType.CODE, TaskType.EXTRACTION],
-        cost_per_1k_input=0.0025,
-        cost_per_1k_output=0.01,
-        max_context=128000,
-    ),
-    ModelProfile(
-        model="claude-sonnet-4-20250514",
-        strengths=[TaskType.REASONING, TaskType.SUMMARIZATION],
+        model="anthropic/mimo-v2.5-pro",
+        strengths=[
+            TaskType.CHAT, TaskType.CODE, TaskType.REASONING,
+            TaskType.EXTRACTION, TaskType.SUMMARIZATION,
+        ],
         cost_per_1k_input=0.003,
         cost_per_1k_output=0.015,
         max_context=200000,

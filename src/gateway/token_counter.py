@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -11,14 +11,11 @@ class UsageRecord:
     model: str
     input_tokens: int
     output_tokens: int
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 COST_TABLE: dict[str, tuple[float, float]] = {
-    "gpt-4o": (0.0025, 0.01),
-    "gpt-4o-mini": (0.00015, 0.0006),
-    "claude-sonnet-4-20250514": (0.003, 0.015),
-    "claude-haiku": (0.00025, 0.00125),
+    "anthropic/mimo-v2.5-pro": (0.003, 0.015),
 }
 
 

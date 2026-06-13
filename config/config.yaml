@@ -1,8 +1,9 @@
 # WYF Agent Configuration
 
 gateway:
-  primary_model: "gpt-4o"
-  fallback_model: "claude-sonnet-4-20250514"
+  primary_model: "anthropic/mimo-v2.5-pro"
+  fallback_model: "anthropic/mimo-v2.5-pro"
+  api_base: ""  # 填入你的 Anthropic 兼容端点，如 https://your-endpoint/v1
   max_tokens: 4096
   temperature: 0.1
   timeout: 30
@@ -36,11 +37,11 @@ reasoning:
 orchestration:
   roles:
     - name: "planner"
-      model: "gpt-4o"
+      model: "anthropic/mimo-v2.5-pro"
     - name: "generator"
-      model: "gpt-4o"
+      model: "anthropic/mimo-v2.5-pro"
     - name: "evaluator"
-      model: "claude-sonnet-4-20250514"
+      model: "anthropic/mimo-v2.5-pro"
 
 safety:
   input_filter:

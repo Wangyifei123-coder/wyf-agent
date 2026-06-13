@@ -5,13 +5,13 @@
     "area": "chat",
     "title": "基础对话能力",
     "user_visible_behavior": "用户可以发送消息并收到连贯、相关的回复",
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "发送简单问候，收到回复",
       "回复内容与问题相关",
       "回复不包含 PII 泄露"
     ],
-    "evidence": "",
+    "evidence": "2026-06-13: API 调用成功，返回中文回答，303 tokens，Status 200",
     "notes": ""
   },
   {
