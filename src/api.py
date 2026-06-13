@@ -1,0 +1,106 @@
+"""WYF Agent API — FastAPI 应用入口"""
+
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+from typing import Any
+
+import structlog
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+from .gateway.client import LLMClient, LLMConfig
+from .gateway.router import ModelRouter
+from .memory.manager import MemoryManager
+from .observability.logger import setup_logging
+from .observability.tracer import Tracer
+from .reasoning.react import ReActEngine
+from .safety.guard import SafetyGuard
+from .tools.registry import ToolRegistry
+
+logger = structlog.get_logger(__name__)
+
+llm_client: LLMClient | None = None
+react_engine: ReActEngine | None = None
+memory_manager: MemoryManager | None = None
+safety_guard: SafetyGuard | None = None
+tracer: Tracer | None = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global llm_client, react_engine, memory_manager, safety_guard, tracer
+
+    setup_logging(level="INFO", format="json")
+
+    config = LLMConfig()
+    llm_client = LLMClient(config)
+    memory_manager = MemoryManager()
+    safety_guard = SafetyGuard()
+    tracer = Tracer()
+    tool_registry = ToolRegistry()
+    react_engine = ReActEngine(llm_client, tool_registry, memory_manager)
+
+    logger.info("agent_initialized")
+    yield
+    logger.info("agent_shutdown")
+
+
+app = FastAPI(title="WYF Agent", version="0.1.0", lifespan=lifespan)
+
+
+class ChatRequest(BaseModel):
+    message: str
+    session_id: str | None = None
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    steps: list[dict[str, Any]] | None = None
+    tokens_used: int = 0
+    model: str = ""
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest) -> ChatResponse:
+    assert safety_guard and react_engine and memory_manager
+
+    safety_check = safety_guard.check_input(request.message)
+    if not safety_check.safe:
+        return ChatResponse(answer=f"Input rejected: {safety_check.reason}")
+
+    result = await react_engine.run(request.message)
+
+    output_check = safety_guard.check_output(result.answer)
+    if not output_check.safe:
+        result.answer = safety_guard.redact_pii(result.answer)
+
+    return ChatResponse(
+        answer=result.answer,
+        steps=[{"type": s.type.value, "content": s.content} for s in result.steps],
+        tokens_used=result.total_tokens,
+    )
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok", "version": "0.1.0"}
+
+
+@app.get("/metrics")
+async def metrics() -> dict[str, Any]:
+    assert llm_client and tracer
+    return {
+        "token_usage": llm_client.token_counter.summary(),
+        "tracing": tracer.summary(),
+    }
+
+
+def main():
+    import uvicorn
+
+    uvicorn.run("src.api:app", host="0.0.0.0", port=8080, reload=True)
+
+
+if __name__ == "__main__":
+    main()

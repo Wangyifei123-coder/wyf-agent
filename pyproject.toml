@@ -1,0 +1,55 @@
+[project]
+name = "wyf-agent"
+version = "0.1.0"
+description = "企业级 AI 智能助手 — 多模型路由、工具调用、记忆管理、推理引擎"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "pydantic>=2.10.0",
+    "openai>=1.60.0",
+    "anthropic>=0.42.0",
+    "litellm>=1.60.0",
+    "chromadb>=0.6.0",
+    "sentence-transformers>=3.4.0",
+    "opentelemetry-api>=1.30.0",
+    "opentelemetry-sdk>=1.30.0",
+    "structlog>=25.1.0",
+    "httpx>=0.28.0",
+    "pyyaml>=6.0.2",
+    "python-dotenv>=1.0.1",
+    "uv>=0.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.9.0",
+    "mypy>=1.14.0",
+]
+
+[project.scripts]
+wyf-agent = "src.api:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

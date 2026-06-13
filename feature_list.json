@@ -1,0 +1,109 @@
+[
+  {
+    "id": "chat-basic",
+    "priority": 1,
+    "area": "chat",
+    "title": "基础对话能力",
+    "user_visible_behavior": "用户可以发送消息并收到连贯、相关的回复",
+    "status": "not_started",
+    "verification": [
+      "发送简单问候，收到回复",
+      "回复内容与问题相关",
+      "回复不包含 PII 泄露"
+    ],
+    "evidence": "",
+    "notes": ""
+  },
+  {
+    "id": "tool-calling",
+    "priority": 2,
+    "area": "tools",
+    "title": "工具调用能力",
+    "user_visible_behavior": "Agent 能根据问题自动选择并调用合适的工具",
+    "status": "not_started",
+    "verification": [
+      "注册工具后能被 LLM 识别",
+      "工具参数正确传递",
+      "工具结果正确返回给用户",
+      "工具调用有审计日志"
+    ],
+    "evidence": "",
+    "notes": ""
+  },
+  {
+    "id": "memory-persistence",
+    "priority": 3,
+    "area": "memory",
+    "title": "记忆持久化",
+    "user_visible_behavior": "多轮对话中 Agent 能记住之前的上下文",
+    "status": "not_started",
+    "verification": [
+      "短期记忆：连续对话保持上下文",
+      "长期记忆：跨会话记住关键信息",
+      "记忆压缩：超长对话不丢失关键信息"
+    ],
+    "evidence": "",
+    "notes": ""
+  },
+  {
+    "id": "safety-filter",
+    "priority": 4,
+    "area": "safety",
+    "title": "安全过滤",
+    "user_visible_behavior": "恶意输入被拦截，PII 输出被脱敏",
+    "status": "not_started",
+    "verification": [
+      "Prompt Injection 被检测并拒绝",
+      "PII 自动脱敏",
+      "速率限制生效"
+    ],
+    "evidence": "",
+    "notes": ""
+  },
+  {
+    "id": "react-reasoning",
+    "priority": 5,
+    "area": "reasoning",
+    "title": "ReAct 推理",
+    "user_visible_behavior": "复杂问题能分步推理，展示思考过程",
+    "status": "not_started",
+    "verification": [
+      "多步推理正确执行",
+      "推理步骤可追踪",
+      "最大迭代限制生效"
+    ],
+    "evidence": "",
+    "notes": ""
+  },
+  {
+    "id": "observability",
+    "priority": 6,
+    "area": "observability",
+    "title": "可观测性",
+    "user_visible_behavior": "所有操作有结构化日志和追踪",
+    "status": "not_started",
+    "verification": [
+      "结构化 JSON 日志输出",
+      "Trace 覆盖完整调用链",
+      "Token 用量可查询"
+    ],
+    "evidence": "",
+    "notes": ""
+  },
+  {
+    "id": "multi-agent",
+    "priority": 7,
+    "area": "orchestration",
+    "title": "多 Agent 协作",
+    "user_visible_behavior": "复杂任务能拆分给多个角色协作完成",
+    "status": "not_started",
+    "verification": [
+      "Planner 生成计划",
+      "Generator 执行实现",
+      "Evaluator 评估质量",
+      "协作流程可追踪"
+    ],
+    "evidence": "",
+    "notes": ""
+  }
+]

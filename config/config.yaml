@@ -1,0 +1,69 @@
+# WYF Agent Configuration
+
+gateway:
+  primary_model: "gpt-4o"
+  fallback_model: "claude-sonnet-4-20250514"
+  max_tokens: 4096
+  temperature: 0.1
+  timeout: 30
+  max_retries: 3
+  retry_backoff: "exponential"
+
+tools:
+  max_execution_time: 30
+  max_result_length: 10000
+  enable_audit_log: true
+
+memory:
+  short_term:
+    max_messages: 50
+    strategy: "sliding_window_with_summary"
+    summary_threshold: 40
+  long_term:
+    provider: "chroma"
+    collection: "wyf-agent-memory"
+    embedding_model: "all-MiniLM-L6-v2"
+    top_k: 5
+  working:
+    max_scratchpad_size: 2000
+
+reasoning:
+  strategy: "react"
+  max_iterations: 10
+  max_plan_steps: 20
+  reflection_on_failure: true
+
+orchestration:
+  roles:
+    - name: "planner"
+      model: "gpt-4o"
+    - name: "generator"
+      model: "gpt-4o"
+    - name: "evaluator"
+      model: "claude-sonnet-4-20250514"
+
+safety:
+  input_filter:
+    enabled: true
+    prompt_injection_detection: true
+    max_input_length: 10000
+  output_filter:
+    enabled: true
+    pii_detection: true
+    content_moderation: true
+  sandbox:
+    enabled: true
+    timeout: 10
+  rate_limit:
+    rpm: 60
+    burst: 10
+
+observability:
+  log_level: "INFO"
+  log_format: "json"
+  tracing:
+    enabled: true
+    sample_rate: 1.0
+  metrics:
+    enabled: true
+    export_interval: 60
