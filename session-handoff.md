@@ -2,45 +2,58 @@
 
 ## 当前已验证
 
-- 项目骨架已创建，7 层架构完整（55 个文件）
-- 所有 Harness 文件就位（AGENTS.md、ARCHITECTURE.md、feature_list.json、claude-progress.md、session-handoff.md、clean-state-checklist.md、evaluator-rubric.md）
+- 项目骨架已创建，7 层架构完整
 - pyproject.toml 配置完成，依赖安装成功
-- 8/8 基础测试通过
+- 57/57 测试通过（基础 + RAG 全组件）
 - LLM 调用验证通过（mimo-v2.5-pro via Anthropic 兼容接口）
 - FastAPI 服务启动正常
-- `/health` 端点正常
-- `/chat` 端点正常，返回中文回答 + 推理步骤 + token 用量
+- `/health`、`/chat`、`/knowledge/ingest`、`/knowledge/stats` 端点验证通过
+- **ruff check 全部通过**
+- **mypy 全部通过**
+- Agentic RAG 全流程验证通过（意图路由、查询改写、自反思循环）
+- 三路混合检索验证通过（向量 + BM25 + 知识图谱）
+- Neo4j Docker 部署并验证连接
+- 评估数据集 20 组，评估得分 0.92
+- Streamlit 前端对话界面完成
 
 ## 本轮改动
 
-- 从零初始化整个项目（D:\PythonProject\my-agent\wyf-agent）
-- 实现所有 7 层的骨架代码
-- 创建完整的文档体系
-- 配置 mimo-v2.5-pro 模型（Anthropic 兼容接口）
-- 修复 3 个 bug：
-  - `pyproject.toml` hatch build 配置缺失
-  - `LLMResponse` 的 `latency_ms` 字段缺少默认值
-  - `.env` 文件未被自动加载（添加 `load_dotenv`）
-- 更新测试用例适配新模型名
-- 修复 ruff + mypy 问题（43→4 ruff, 4→2 mypy）
+- 实现 Agentic RAG 全流程（LangGraph 状态机）
+- 实现三路混合检索（向量 + BM25 + Neo4j 知识图谱，RRF 融合）
+- 创建评估数据集（20 组测试用例）+ 评估脚本
+- 修复 Tool Call 泄露（/chat 直接走 RAGGraph）
+- 优化查询改写（代词消解）和问题分解（多文档检索）
+- 创建 Streamlit 前端对话界面
+- 创建 Docker 部署配置（docker-compose）
 
-## 仍损坏或未验证
+## 新增文件
 
-- 向量存储未集成（ChromaDB 已安装但未接入 Memory 层）
-- 评估数据集为空（`evals/datasets/` 无内容）
-- 工具层只有注册中心，无具体工具实现
-- 前端未开发
-- Docker 部署未验证
-- 终端中文显示乱码（Windows GBK 编码问题，需设置 `PYTHONIOENCODING=utf-8`）
+```
+src/rag/
+├── __init__.py
+├── loader.py           # 文档加载（Markdown/PDF/TXT）
+├── splitter.py         # 结构感知文本分块
+├── embeddings.py       # text2vec 中文 Embedding
+├── vectorstore.py      # ChromaDB 封装
+├── retriever.py        # RRF 重排序检索
+├── bm25_retriever.py   # BM25 关键词检索
+├── kg_retriever.py     # Neo4j 知识图谱检索
+├── hybrid_retriever.py # 三路 RRF 融合
+└── graph.py            # LangGraph Agentic RAG 状态机
+src/tools/
+└── knowledge.py        # 知识检索工具
+evals/
+├── test_dataset.json   # 20 组评估用例
+├── run_eval.py         # 评估脚本
+└── eval_results.json   # 评估结果
+frontend.py             # Streamlit 前端
+docker/
+├── Dockerfile          # 后端镜像
+├── Dockerfile.frontend # 前端镜像
+└── docker-compose.yaml # 一键部署
+```
 
-## 下一步最佳动作
-
-1. 实现第一个具体工具（如 `search_knowledge_base`）
-2. 集成 ChromaDB 到 Memory 层
-3. 编写评估数据集
-4. 开发前端对话界面
-
-## 命令
+## 启动命令
 
 ```bash
 # 进入项目
@@ -54,12 +67,14 @@ pytest tests/ -v
 python -m ruff check src/
 python -m mypy src/
 
-# 启动（后台运行）
-Start-Process -FilePath "python" -ArgumentList "-m", "uvicorn", "src.api:app", "--port", "8080" -WorkingDirectory "D:\PythonProject\my-agent\wyf-agent" -WindowStyle Hidden
+# 启动后端
+python -m uvicorn src.api:app --port 8080
 
-# 测试
-python -c "import httpx; r = httpx.post('http://localhost:8080/chat', json={'message': '你好'}, timeout=60); print(r.status_code)"
-python -c "import httpx; print(httpx.get('http://localhost:8080/health').json())"
+# 启动前端
+python -m streamlit run frontend.py --server.port 8501
+
+# Docker 一键部署
+docker compose -f docker/docker-compose.yaml up -d
 
 # 停止服务
 netstat -ano | findstr ":8080" | findstr "LISTENING"
@@ -71,4 +86,14 @@ taskkill /PID <pid> /F
 - API Key: `config/.env`（已 gitignore）
 - 模型: `anthropic/mimo-v2.5-pro`
 - 端点: `https://token-plan-cn.xiaomimimo.com/anthropic`
-- 端口: `8080`
+- 后端端口: `8080`
+- 前端端口: `8501`
+- Neo4j: `bolt://localhost:7687`（用户名 neo4j，密码 wyf-agent-2024）
+- ChromaDB: `data/chroma/`（持久化）
+
+## 待完成
+
+- 更多文档入库测试
+- 评估数据集扩充（20 → 50+）
+- 增量更新支持
+- 评估优化（多文档检索、代词消解持续改进）

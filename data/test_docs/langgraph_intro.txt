@@ -1,0 +1,19 @@
+LangGraph 是 LangChain 团队开发的框架，用于构建基于状态图的 AI Agent 应用。
+
+核心概念：
+- StateGraph：状态图，定义 Agent 的工作流
+- Node：节点，每个节点执行一个具体操作
+- Edge：边，定义节点之间的转移关系
+- Conditional Edge：条件边，根据状态决定转移方向
+
+LangGraph 的优势在于：
+1. 可视化 Agent 工作流
+2. 内置状态管理和持久化
+3. 支持循环和分支逻辑
+4. 与 LangChain 生态无缝集成
+
+适用场景：
+- 多步推理 Agent
+- RAG pipeline 编排
+- 多 Agent 协作
+- 复杂工作流自动化

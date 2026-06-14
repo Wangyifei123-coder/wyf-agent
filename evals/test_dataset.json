@@ -1,0 +1,350 @@
+[
+  {
+    "id": "qa_simple_01",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python有什么特点？",
+    "expected_output": "Python的主要特点包括：简洁易读、动态类型、跨平台、丰富的标准库",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["简洁易读", "动态类型", "跨平台", "标准库"]
+  },
+  {
+    "id": "qa_simple_02",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python有哪些应用领域？",
+    "expected_output": "Python的应用领域包括：Web开发、数据科学、人工智能、自动化运维、网络爬虫",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Web开发", "数据科学", "人工智能", "自动化运维", "网络爬虫"]
+  },
+  {
+    "id": "qa_simple_03",
+    "scenario": "knowledge_qa_simple",
+    "input": "RAG技术是什么？",
+    "expected_output": "RAG是检索增强生成技术，结合信息检索和文本生成，工作流程包括检索、增强、生成三个阶段",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["检索增强生成", "检索", "增强", "生成"]
+  },
+  {
+    "id": "qa_simple_04",
+    "scenario": "knowledge_qa_simple",
+    "input": "RAG有什么优势？",
+    "expected_output": "RAG的优势包括：减少幻觉、知识可更新、可追溯性",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["减少幻觉", "知识可更新", "可追溯"]
+  },
+  {
+    "id": "qa_simple_05",
+    "scenario": "knowledge_qa_simple",
+    "input": "LangGraph是什么？",
+    "expected_output": "LangGraph是LangChain团队开发的框架，用于构建基于状态图的AI Agent应用",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["LangChain", "状态图", "AI Agent"]
+  },
+  {
+    "id": "qa_simple_06",
+    "scenario": "knowledge_qa_simple",
+    "input": "LangGraph的核心概念有哪些？",
+    "expected_output": "LangGraph的核心概念包括：StateGraph状态图、Node节点、Edge边、Conditional Edge条件边",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["StateGraph", "Node", "Edge", "Conditional Edge"]
+  },
+  {
+    "id": "qa_simple_07",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python当前最新版本是什么？",
+    "expected_output": "Python当前最新稳定版本为Python 3.14，推荐使用Python 3.11+版本",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Python 3.14", "3.11"]
+  },
+  {
+    "id": "qa_simple_08",
+    "scenario": "knowledge_qa_simple",
+    "input": "RAG技术有哪些常用的向量数据库？",
+    "expected_output": "RAG常用的向量数据库包括：ChromaDB、Milvus、Qdrant、Pinecone",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["ChromaDB", "Milvus", "Qdrant", "Pinecone"]
+  },
+  {
+    "id": "qa_simple_09",
+    "scenario": "knowledge_qa_simple",
+    "input": "LangGraph有哪些适用场景？",
+    "expected_output": "LangGraph适用场景包括：多步推理Agent、RAG pipeline编排、多Agent协作、复杂工作流自动化",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["多步推理", "RAG pipeline", "多Agent", "工作流"]
+  },
+  {
+    "id": "qa_simple_10",
+    "scenario": "knowledge_qa_simple",
+    "input": "谁创造了Python？",
+    "expected_output": "Python由Guido van Rossum于1991年首次发布",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Guido van Rossum", "1991"]
+  },
+  {
+    "id": "qa_simple_11",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是机器学习？",
+    "expected_output": "机器学习是人工智能的一个分支，使计算机系统能够通过经验自动改进",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["人工智能", "经验", "自动改进"]
+  },
+  {
+    "id": "qa_simple_12",
+    "scenario": "knowledge_qa_simple",
+    "input": "机器学习有哪些主要类型？",
+    "expected_output": "机器学习主要类型包括：监督学习、无监督学习、强化学习",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["监督学习", "无监督学习", "强化学习"]
+  },
+  {
+    "id": "qa_simple_13",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是深度学习？",
+    "expected_output": "深度学习是机器学习的子集，使用多层神经网络，常见模型包括CNN、RNN、Transformer",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["机器学习", "神经网络", "CNN", "Transformer"]
+  },
+  {
+    "id": "qa_simple_14",
+    "scenario": "knowledge_qa_simple",
+    "input": "Docker是什么？",
+    "expected_output": "Docker是开源的应用容器引擎，让开发者可以打包应用及其依赖包到一个可移植的容器中",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["容器引擎", "打包", "可移植"]
+  },
+  {
+    "id": "qa_simple_15",
+    "scenario": "knowledge_qa_simple",
+    "input": "Docker的核心概念有哪些？",
+    "expected_output": "Docker核心概念包括：镜像Image、容器Container、仓库Registry",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["镜像", "容器", "仓库"]
+  },
+  {
+    "id": "qa_simple_16",
+    "scenario": "knowledge_qa_simple",
+    "input": "FastAPI有什么特点？",
+    "expected_output": "FastAPI特点包括：高性能、自动文档、类型安全、异步支持",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["高性能", "自动文档", "类型安全", "异步"]
+  },
+  {
+    "id": "qa_simple_17",
+    "scenario": "knowledge_qa_simple",
+    "input": "ChromaDB有什么特点？",
+    "expected_output": "ChromaDB是嵌入式向量数据库，特点包括轻量、零配置、适合原型开发",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["嵌入式", "轻量", "零配置"]
+  },
+  {
+    "id": "qa_simple_18",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是Agentic RAG？",
+    "expected_output": "Agentic RAG在传统RAG基础上引入Agent能力，包括意图路由、查询改写、自我评估、问题分解",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Agent", "意图路由", "查询改写", "自我评估"]
+  },
+  {
+    "id": "qa_simple_19",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python是谁创造的？",
+    "expected_output": "Python由Guido van Rossum于1991年首次发布",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Guido van Rossum", "1991"]
+  },
+  {
+    "id": "qa_simple_20",
+    "scenario": "knowledge_qa_simple",
+    "input": "Milvus和Qdrant有什么区别？",
+    "expected_output": "Milvus是Go+C++实现的分布式向量数据库，Qdrant是Rust实现的高性能向量数据库",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Milvus", "Qdrant", "分布式", "Rust"]
+  },
+  {
+    "id": "qa_multi_01",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "RAG技术和LangGraph有什么关系？",
+    "expected_output": "LangGraph可以用于编排RAG pipeline，是Agentic RAG的常用框架",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["RAG", "LangGraph", "Agentic RAG", "pipeline"]
+  },
+  {
+    "id": "qa_multi_02",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "Python和RAG技术有什么关联？",
+    "expected_output": "Python是RAG技术的主要实现语言，RAG相关的库和框架如LangChain、ChromaDB都有Python SDK",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Python", "RAG", "LangChain", "ChromaDB"]
+  },
+  {
+    "id": "qa_multi_03",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "如何用Python实现RAG系统？",
+    "expected_output": "可以用Python结合LangChain、ChromaDB、sentence-transformers等库实现RAG系统",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Python", "LangChain", "ChromaDB", "Embedding", "检索"]
+  },
+  {
+    "id": "qa_multi_04",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "LangGraph相比其他RAG框架有什么优势？",
+    "expected_output": "LangGraph的优势在于可视化Agent工作流、内置状态管理、支持循环和分支逻辑、与LangChain生态无缝集成",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["LangGraph", "可视化", "状态管理", "循环", "LangChain"]
+  },
+  {
+    "id": "qa_multi_05",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "Agentic RAG和传统RAG有什么区别？",
+    "expected_output": "Agentic RAG在传统RAG基础上引入Agent能力，包括意图路由、查询改写、自我评估、问题分解",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Agentic RAG", "意图路由", "查询改写", "自我评估", "问题分解"]
+  },
+  {
+    "id": "qa_multi_06",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "机器学习和深度学习有什么关系？",
+    "expected_output": "深度学习是机器学习的子集，使用多层神经网络，是机器学习的一个重要分支",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["机器学习", "深度学习", "神经网络", "子集"]
+  },
+  {
+    "id": "qa_multi_07",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "Docker和FastAPI如何配合使用？",
+    "expected_output": "可以用Docker容器化FastAPI应用，通过Dockerfile构建镜像，用docker-compose部署",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Docker", "FastAPI", "容器化", "Dockerfile"]
+  },
+  {
+    "id": "qa_multi_08",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "向量数据库在RAG系统中起什么作用？",
+    "expected_output": "向量数据库用于存储文档的向量嵌入，在RAG系统中负责检索相关文档",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["向量数据库", "RAG", "嵌入", "检索"]
+  },
+  {
+    "id": "qa_multi_09",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "ChromaDB和Milvus哪个更适合生产环境？",
+    "expected_output": "Milvus更适合大规模生产环境，ChromaDB适合原型开发和小规模项目",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["ChromaDB", "Milvus", "生产环境", "原型"]
+  },
+  {
+    "id": "qa_multi_10",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "Python的机器学习生态有哪些库？",
+    "expected_output": "Python机器学习生态包括：TensorFlow、PyTorch、scikit-learn、NumPy、Pandas等",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["TensorFlow", "PyTorch", "scikit-learn", "NumPy"]
+  },
+  {
+    "id": "chitchat_01",
+    "scenario": "chitchat",
+    "input": "你好",
+    "expected_output": "你好",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_02",
+    "scenario": "chitchat",
+    "input": "今天天气怎么样？",
+    "expected_output": "天气",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_03",
+    "scenario": "chitchat",
+    "input": "你是谁？",
+    "expected_output": "助手",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_04",
+    "scenario": "chitchat",
+    "input": "讲个笑话",
+    "expected_output": "笑话",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_05",
+    "scenario": "chitchat",
+    "input": "1+1等于几？",
+    "expected_output": "2",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_06",
+    "scenario": "chitchat",
+    "input": "谢谢",
+    "expected_output": "不客气",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "multi_turn_01",
+    "scenario": "multi_turn",
+    "input": "它的最新版本是什么？",
+    "conversation_history": [
+      {"role": "user", "content": "Python是什么？"},
+      {"role": "assistant", "content": "Python是一种高级编程语言，由Guido van Rossum于1991年创建。"}
+    ],
+    "expected_output": "Python当前最新稳定版本为Python 3.14",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Python 3.14"]
+  },
+  {
+    "id": "multi_turn_02",
+    "scenario": "multi_turn",
+    "input": "它的核心组件有哪些？",
+    "conversation_history": [
+      {"role": "user", "content": "LangGraph是什么？"},
+      {"role": "assistant", "content": "LangGraph是LangChain团队开发的Agent框架。"}
+    ],
+    "expected_output": "LangGraph的核心组件包括StateGraph、Node、Edge",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["StateGraph", "Node", "Edge"]
+  },
+  {
+    "id": "multi_turn_03",
+    "scenario": "multi_turn",
+    "input": "它有哪些优势？",
+    "conversation_history": [
+      {"role": "user", "content": "RAG技术是什么？"},
+      {"role": "assistant", "content": "RAG是检索增强生成技术。"}
+    ],
+    "expected_output": "RAG的优势包括减少幻觉、知识可更新、可追溯性",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["减少幻觉", "知识可更新", "可追溯"]
+  },
+  {
+    "id": "multi_turn_04",
+    "scenario": "multi_turn",
+    "input": "怎么用它部署应用？",
+    "conversation_history": [
+      {"role": "user", "content": "Docker是什么？"},
+      {"role": "assistant", "content": "Docker是开源的应用容器引擎。"}
+    ],
+    "expected_output": "Docker部署应用需要编写Dockerfile，构建镜像，运行容器",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Dockerfile", "镜像", "容器"]
+  },
+  {
+    "id": "multi_turn_05",
+    "scenario": "multi_turn",
+    "input": "它和PyTorch哪个好？",
+    "conversation_history": [
+      {"role": "user", "content": "什么是TensorFlow？"},
+      {"role": "assistant", "content": "TensorFlow是Google开发的深度学习框架。"}
+    ],
+    "expected_output": "TensorFlow和PyTorch各有优势，TensorFlow适合生产部署，PyTorch适合研究",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["TensorFlow", "PyTorch"]
+  }
+]

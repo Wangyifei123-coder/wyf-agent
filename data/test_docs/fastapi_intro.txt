@@ -1,0 +1,33 @@
+FastAPI 是一个现代、快速、高性能的 Python Web 框架，用于构建 API。
+
+主要特点：
+1. 高性能：基于 Starlette 和 Pydantic，性能与 Node.js 和 Go 相当
+2. 自动文档：自动生成 Swagger UI 和 ReDoc 文档
+3. 类型安全：使用 Python 类型注解，自动验证请求数据
+4. 异步支持：原生支持 async/await
+
+基本示例：
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class Item(BaseModel):
+    name: str
+    price: float
+
+@app.post("/items/")
+async def create_item(item: Item):
+    return {"name": item.name, "price": item.price}
+
+依赖注入：
+FastAPI 使用 Depends 实现依赖注入，可以轻松管理数据库连接、认证等。
+
+中间件：
+支持 CORS、GZip、请求日志等中间件。
+
+部署方式：
+- Uvicorn：ASGI 服务器，推荐用于开发和生产
+- Gunicorn + Uvicorn worker：多进程部署
+- Docker：容器化部署
