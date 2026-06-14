@@ -57,12 +57,12 @@ def _split_by_separators(
     return [text] if text.strip() else []
 
 
-def split_text(text: str, chunk_size: int = 512, overlap: int = 64) -> list[str]:
+def split_text(text: str, chunk_size: int = 512, overlap: int = 128) -> list[str]:
     return _split_by_separators(text, chunk_size, overlap, SEPARATORS)
 
 
 def split_documents(
-    docs: list[Document], chunk_size: int = 512, overlap: int = 64
+    docs: list[Document], chunk_size: int = 512, overlap: int = 128
 ) -> list[Document]:
     result: list[Document] = []
     for doc in docs:

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import os
+
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -24,7 +27,6 @@ from .rag.retriever import Retriever
 from .rag.vectorstore import VectorStore
 from .reasoning.react import ReActEngine
 from .safety.guard import SafetyGuard
-from .tools.knowledge import KnowledgeSearchTool
 from .tools.registry import ToolRegistry
 
 _env_path = Path(__file__).parent.parent / "config" / ".env"
@@ -65,9 +67,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     retriever = Retriever(vector_store)
     rag_graph = RAGGraph(llm_client, retriever)
 
-    knowledge_tool = KnowledgeSearchTool(rag_graph)
-    tool_registry.register(knowledge_tool)
-
     react_engine = ReActEngine(llm_client, tool_registry, memory_manager)
 
     logger.info("agent_initialized")
@@ -92,22 +91,26 @@ class ChatResponse(BaseModel):
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
-    assert safety_guard and react_engine and memory_manager
+    assert safety_guard and rag_graph and memory_manager
 
     safety_check = safety_guard.check_input(request.message)
     if not safety_check.safe:
         return ChatResponse(answer=f"Input rejected: {safety_check.reason}")
 
-    result = await react_engine.run(request.message)
+    result = await rag_graph.run(request.message)
+    answer = result.get("answer", "")
 
-    output_check = safety_guard.check_output(result.answer)
+    output_check = safety_guard.check_output(answer)
     if not output_check.safe:
-        result.answer = safety_guard.redact_pii(result.answer)
+        answer = safety_guard.redact_pii(answer)
+
+    memory_manager.add_message("user", request.message)
+    memory_manager.add_message("assistant", answer)
 
     return ChatResponse(
-        answer=result.answer,
-        steps=[{"type": s.type.value, "content": s.content} for s in result.steps],
-        tokens_used=result.total_tokens,
+        answer=answer,
+        steps=[{"type": "answer", "content": answer}],
+        tokens_used=0,
     )
 
 
