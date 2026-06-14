@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any
 
 import structlog
 
@@ -54,7 +53,11 @@ class SafetyGuard:
             return SafetyCheckResult(safe=True)
 
         if len(text) > self.max_input_length:
-            return SafetyCheckResult(safe=False, reason="Input exceeds maximum length", detected_issues=["length_exceeded"])
+            return SafetyCheckResult(
+                safe=False,
+                reason="Input exceeds maximum length",
+                detected_issues=["length_exceeded"],
+            )
 
         issues: list[str] = []
         text_lower = text.lower()
@@ -64,7 +67,11 @@ class SafetyGuard:
 
         if issues:
             logger.warning("input_safety_issue", issues=issues, text_preview=text[:100])
-            return SafetyCheckResult(safe=False, reason="Potential prompt injection detected", detected_issues=issues)
+            return SafetyCheckResult(
+                safe=False,
+                reason="Potential prompt injection detected",
+                detected_issues=issues,
+            )
 
         return SafetyCheckResult(safe=True)
 
@@ -80,7 +87,11 @@ class SafetyGuard:
 
         if issues:
             logger.warning("output_safety_issue", issues=issues)
-            return SafetyCheckResult(safe=False, reason="PII detected in output", detected_issues=issues)
+            return SafetyCheckResult(
+                safe=False,
+                reason="PII detected in output",
+                detected_issues=issues,
+            )
 
         return SafetyCheckResult(safe=True)
 

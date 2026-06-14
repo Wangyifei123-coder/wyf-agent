@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Callable, Coroutine
+from enum import StrEnum
+from typing import Any
 
 import structlog
 
-logger = structlog.get_logger(__name__)
 
-
-class NodeStatus(str, Enum):
+class NodeStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
     FAILED = "failed"
     SKIPPED = "skipped"
+
+
+logger = structlog.get_logger(__name__)
 
 
 @dataclass

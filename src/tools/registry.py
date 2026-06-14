@@ -59,12 +59,12 @@ class ToolRegistry:
     def to_openai_functions(self) -> list[dict[str, Any]]:
         functions = []
         for tool in self._tools.values():
-            params = {}
+            params: dict[str, Any] = {}
             required = []
             for p in tool.schema.parameters:
                 params[p.name] = {"type": p.type, "description": p.description}
                 if p.enum:
-                    params[p.name]["enum"] = p.enum
+                    params[p.name]["enum"] = [str(e) for e in p.enum]
                 if p.required:
                     required.append(p.name)
 

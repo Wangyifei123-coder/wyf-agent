@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
+from datetime import UTC
 from typing import Any
 
 import structlog
@@ -35,7 +35,10 @@ class ShortTermMemory:
         recent = self.messages[-last_n:]
         context = []
         if self.summary:
-            context.append({"role": "system", "content": f"Previous conversation summary: {self.summary}"})
+            summary_text = (
+                f"Previous conversation summary: {self.summary}"
+            )
+            context.append({"role": "system", "content": summary_text})
         for msg in recent:
             context.append({"role": msg.role, "content": msg.content})
         return context
@@ -43,9 +46,14 @@ class ShortTermMemory:
     def _compress(self) -> None:
         overflow = self.messages[: len(self.messages) - self.summary_threshold]
         new_summary_parts = [m.content[:200] for m in overflow[-5:]]
-        self.summary = (self.summary + " | " + " ".join(new_summary_parts)).strip(" | ")
+        combined = self.summary + " | " + " ".join(new_summary_parts)
+        self.summary = combined.strip().strip("|").strip()
         self.messages = self.messages[len(overflow) :]
-        logger.info("memory_compressed", remaining=len(self.messages), summary_length=len(self.summary))
+        logger.info(
+            "memory_compressed",
+            remaining=len(self.messages),
+            summary_length=len(self.summary),
+        )
 
     def clear(self) -> None:
         self.messages.clear()
@@ -68,7 +76,12 @@ class LongTermMemory:
             content = entry["content"].lower()
             score = sum(1 for word in query_lower.split() if word in content)
             if score > 0:
-                results.append({"key": key, "content": entry["content"], "score": score, **entry["metadata"]})
+                results.append({
+                    "key": key,
+                    "content": entry["content"],
+                    "score": score,
+                    **entry["metadata"],
+                })
         results.sort(key=lambda x: x["score"], reverse=True)
         return results[:top_k]
 
@@ -106,15 +119,22 @@ class MemoryManager:
         self.working = WorkingMemory()
 
     def add_message(self, role: str, content: str, **metadata: Any) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        msg = Message(role=role, content=content, timestamp=datetime.now(timezone.utc).isoformat(), metadata=metadata)
+        msg = Message(
+            role=role,
+            content=content,
+            timestamp=datetime.now(UTC).isoformat(),
+            metadata=metadata,
+        )
         self.short_term.add(msg)
 
     def get_context(self, last_n: int = 20) -> list[dict[str, str]]:
         return self.short_term.get_context(last_n)
 
-    async def remember(self, key: str, content: str, metadata: dict[str, Any] | None = None) -> None:
+    async def remember(
+        self, key: str, content: str, metadata: dict[str, Any] | None = None,
+    ) -> None:
         await self.long_term.store(key, content, metadata)
 
     async def recall(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:

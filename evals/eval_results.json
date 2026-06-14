@@ -1,0 +1,614 @@
+[
+  {
+    "id": "qa_simple_01",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python有什么特点？",
+    "expected_keywords": [
+      "简洁易读",
+      "动态类型",
+      "跨平台",
+      "标准库"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据提供的文档内容，Python 的主要特点如下：\n\n1.  **简洁易读**：Python 使用缩进来定义代码块，语法简洁清晰 [来源3]。\n2.  **动态类型**：变量不需要声明类型，会在运行时自动推断类型 [来源3][来源8]。\n3.  **跨平台**：支持 Windows、macOS、Linux 等多个操作系统 [来源3]。\n4.  **丰富的标准库**：内置大量模块，覆盖文件处理、网络"
+  },
+  {
+    "id": "qa_simple_02",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python有哪些应用领域？",
+    "expected_keywords": [
+      "Web开发",
+      "数据科学",
+      "人工智能",
+      "自动化运维",
+      "网络爬虫"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 5,
+    "score": 0.8,
+    "status": "PASS",
+    "answer_preview": "根据文档内容，Python 的应用领域主要包括以下几个方面 [来源3]：\n\n1.  **Web 开发**：使用 Django、Flask、**FastAPI** 等框架来构建网络应用和 API。\n2.  **数据科学**：利用 NumPy、Pandas、Matplotlib 等库进行数据处理、分析和可视化。\n3.  **人工智能**：依托 TensorFlow、PyTorch、scikit-lea"
+  },
+  {
+    "id": "qa_simple_03",
+    "scenario": "knowledge_qa_simple",
+    "input": "RAG技术是什么？",
+    "expected_keywords": [
+      "检索增强生成",
+      "检索",
+      "增强",
+      "生成"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "RAG（Retrieval-Augmented Generation，检索增强生成）是一种结合信息检索和文本生成的AI技术[来源1][来源8]。\n\n**核心原理**：\nRAG的工作流程分为三个阶段：\n1.  **检索（Retrieval）**：根据用户查询，从知识库中检索相关文档。\n2.  **增强（Augmented）**：将检索到的文档作为上下文，与用户问题一起输入给大语言模型。\n3.  **"
+  },
+  {
+    "id": "qa_simple_04",
+    "scenario": "knowledge_qa_simple",
+    "input": "RAG有什么优势？",
+    "expected_keywords": [
+      "减少幻觉",
+      "知识可更新",
+      "可追溯"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 3,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "RAG（检索增强生成）技术主要具有以下优势：\n\n1. **减少幻觉**：通过基于真实检索到的文档来生成回答，显著降低了大语言模型编造或虚构信息的概率 [来源1][来源8]。\n\n2. **知识可更新**：当需要更新系统知识时，只需更新其底层的知识库，而无需对整个大语言模型进行重新训练，这大大提高了效率和灵活性 [来源1]。\n\n3. **可追溯性**：系统生成的回答可以明确标注引用的知识来源，这使用户"
+  },
+  {
+    "id": "qa_simple_05",
+    "scenario": "knowledge_qa_simple",
+    "input": "LangGraph是什么？",
+    "expected_keywords": [
+      "LangChain",
+      "状态图",
+      "AI Agent"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 3,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档，LangGraph 是 **LangChain 团队**开发的一个框架，主要用于构建**基于状态图的 AI Agent 应用** [来源1][来源8]。\n\n以下是它的核心要点：\n\n### 1. 核心概念\n它围绕几个关键概念构建工作流：\n*   **StateGraph (状态图)**：定义 Agent 的整体工作流程 [来源1]。\n*   **Node (节点)**：每个节点执行"
+  },
+  {
+    "id": "qa_simple_06",
+    "scenario": "knowledge_qa_simple",
+    "input": "LangGraph的核心概念有哪些？",
+    "expected_keywords": [
+      "StateGraph",
+      "Node",
+      "Edge",
+      "Conditional Edge"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "## LangGraph 的核心概念\n\n根据文档内容，LangGraph 的核心概念包括以下四个[来源1]：\n\n| 概念 | 说明 |\n|------|------|\n| **StateGraph** | 状态图，用于定义 Agent 的工作流 |\n| **Node** | 节点，每个节点执行一个具体操作 |\n| **Edge** | 边，定义节点之间的转移关系 |\n| **Conditional"
+  },
+  {
+    "id": "qa_simple_07",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python当前最新版本是什么？",
+    "expected_keywords": [
+      "Python 3.14",
+      "3.11"
+    ],
+    "keyword_hits": 2,
+    "keyword_total": 2,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据文档内容，**Python 当前最新稳定版本为 Python 3.14**，推荐使用 Python 3.11+ 版本。[来源3]\n\n---\n\n⚠️ **注意**：文档中的版本信息可能不是最新的，因为 Python 的版本会持续更新。如需了解最新版本，建议访问 [Python 官网](https://www.python.org/) 查看。"
+  },
+  {
+    "id": "qa_simple_08",
+    "scenario": "knowledge_qa_simple",
+    "input": "RAG技术有哪些常用的向量数据库？",
+    "expected_keywords": [
+      "ChromaDB",
+      "Milvus",
+      "Qdrant",
+      "Pinecone"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档，RAG（检索增强生成）技术常用的向量数据库包括以下几种：\n\n1.  **ChromaDB**：一种嵌入式向量数据库，基于 Python 开发，具有轻量、零配置的特点，适合原型开发和小到中等规模的项目。[来源1][来源2]\n2.  **Milvus**：一种分布式向量数据库服务，用 Go 和 C++ 编写，以高性能和水平扩展能力著称，适用于大规模生产环境。[来源1][来源2]\n3."
+  },
+  {
+    "id": "qa_simple_09",
+    "scenario": "knowledge_qa_simple",
+    "input": "LangGraph有哪些适用场景？",
+    "expected_keywords": [
+      "多步推理",
+      "RAG pipeline",
+      "多Agent",
+      "工作流"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 4,
+    "score": 0.75,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档，LangGraph 的主要适用场景如下：\n\n1. **多步推理 Agent** [来源1]\n2. **RAG pipeline 编排** [来源1]\n3. **多 Agent 协作** [来源1]\n4. **复杂工作流自动化** [来源1]\n\n这些场景充分利用了 LangGraph 基于状态图的工作流定义、内置状态管理以及对循环和分支逻辑的支持等核心优势 [来源1]。"
+  },
+  {
+    "id": "qa_simple_10",
+    "scenario": "knowledge_qa_simple",
+    "input": "谁创造了Python？",
+    "expected_keywords": [
+      "Guido van Rossum",
+      "1991"
+    ],
+    "keyword_hits": 1,
+    "keyword_total": 2,
+    "score": 0.5,
+    "status": "PASS",
+    "answer_preview": "根据文档内容，Python 是由 **Guido van Rossum** 创造的[来源3][来源8]。"
+  },
+  {
+    "id": "qa_simple_11",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是机器学习？",
+    "expected_keywords": [
+      "人工智能",
+      "经验",
+      "自动改进"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 3,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "## 什么是机器学习？\n\n机器学习（Machine Learning）是**人工智能的一个分支**，它使计算机系统能够**通过经验自动改进**。[来源1]\n\n---\n\n### 主要类型\n\n机器学习主要分为三种类型：[来源1]\n\n| 类型 | 数据特点 | 常见算法 | 应用场景 |\n|------|---------|---------|---------|\n| **监督学习** | 使用标注数据"
+  },
+  {
+    "id": "qa_simple_12",
+    "scenario": "knowledge_qa_simple",
+    "input": "机器学习有哪些主要类型？",
+    "expected_keywords": [
+      "监督学习",
+      "无监督学习",
+      "强化学习"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 3,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档，机器学习的主要类型有三种，分别是**监督学习、无监督学习和强化学习**[来源1]。\n\n具体说明如下：\n\n1.  **监督学习 (Supervised Learning)**\n    *   **核心特点**：使用带有标签（正确答案）的数据进行训练。\n    *   **常见算法**：线性回归、决策树、随机森林、支持向量机（SVM）、神经网络。\n    *   **典型应用**：主"
+  },
+  {
+    "id": "qa_simple_13",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是深度学习？",
+    "expected_keywords": [
+      "机器学习",
+      "神经网络",
+      "CNN",
+      "Transformer"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "深度学习是机器学习的一个子集，它使用多层神经网络来学习数据的层次化表示 [来源1]。其核心特点是能够通过多层结构自动从原始数据中提取特征，无需大量人工设计。\n\n### 主要模型类型与应用场景\n根据文档，深度学习中的几种重要模型类型及其应用如下 [来源1]：\n\n| 模型类型 | 典型应用场景 | 代表模型示例 |\n|---------|-------------|-------------|\n| *"
+  },
+  {
+    "id": "qa_simple_14",
+    "scenario": "knowledge_qa_simple",
+    "input": "Docker是什么？",
+    "expected_keywords": [
+      "容器引擎",
+      "打包",
+      "可移植"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 3,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据文档内容，Docker 的相关信息如下：\n\n## Docker 简介\n\n**Docker 是一个开源的应用容器引擎**，让开发者可以打包应用及其依赖包到一个可移植的容器中。[来源1]\n\n## 核心概念\n\nDocker 包含三个核心概念：\n\n| 概念 | 说明 |\n|------|------|\n| **镜像（Image）** | 只读模板，包含运行应用所需的一切，分层存储，共享基础层，通过 D"
+  },
+  {
+    "id": "qa_simple_15",
+    "scenario": "knowledge_qa_simple",
+    "input": "Docker的核心概念有哪些？",
+    "expected_keywords": [
+      "镜像",
+      "容器",
+      "仓库"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 3,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "Docker 的核心概念主要有三个，具体如下：\n\n1.  **镜像（Image）**：这是一个只读模板，包含了运行应用所需的一切（如代码、运行时、库等）。它采用分层存储，可以共享基础层，并且可以通过编写 Dockerfile 来构建 [来源1]。\n\n2.  **容器（Container）**：容器是镜像的运行实例。它相互隔离，拥有独立的文件系统，并且可以启动、停止或删除 [来源1]。\n\n3.  *"
+  },
+  {
+    "id": "qa_simple_16",
+    "scenario": "knowledge_qa_simple",
+    "input": "FastAPI有什么特点？",
+    "expected_keywords": [
+      "高性能",
+      "自动文档",
+      "类型安全",
+      "异步"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "FastAPI 是一个现代、快速、高性能的 Python Web 框架，用于构建 API。其主要特点如下 [来源2]：\n\n**核心特点：**\n- **高性能**：基于 Starlette 和 Pydantic，性能与 Node.js 和 Go 相当。\n- **自动文档**：能够自动生成 Swagger UI 和 ReDoc 格式的 API 文档。\n- **类型安全**：利用 Python 类型注解"
+  },
+  {
+    "id": "qa_simple_17",
+    "scenario": "knowledge_qa_simple",
+    "input": "ChromaDB有什么特点？",
+    "expected_keywords": [
+      "嵌入式",
+      "轻量",
+      "零配置"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 3,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档，ChromaDB 的特点如下：\n\n**1. 核心定位与类型**\n*   **类型**：它是一个**嵌入式**向量数据库 [来源1]。\n*   **主要语言**：使用 **Python** 开发 [来源1]。\n\n**2. 主要特点**\n*   **轻量**：设计上追求轻量化 [来源1]。\n*   **零配置**：开箱即用，无需复杂配置 [来源1]。\n*   **适合原型开发**：非"
+  },
+  {
+    "id": "qa_simple_18",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是Agentic RAG？",
+    "expected_keywords": [
+      "Agent",
+      "意图路由",
+      "查询改写",
+      "自我评估"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据文档内容，Agentic RAG 是一种在传统 RAG 技术基础上进行增强的技术。\n\n**核心定义**：Agentic RAG 在传统 RAG（检索增强生成）的**检索、增强、生成**三个阶段基础上，引入了 Agent（智能体）的能力，使其能够更智能、更主动地优化信息检索和回答生成的过程。[来源1]\n\n**具体增强的能力包括**：[来源1]\n1.  **意图路由**：判断用户的查询是否真正需要"
+  },
+  {
+    "id": "qa_simple_19",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python是谁创造的？",
+    "expected_keywords": [
+      "Guido van Rossum",
+      "1991"
+    ],
+    "keyword_hits": 2,
+    "keyword_total": 2,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据文档内容，Python 是由 **Guido van Rossum** 创造的 [来源3][来源8]。文档中提到，Python 是一种高级编程语言，由 Guido van Rossum 于 **1991 年首次发布** [来源3]。"
+  },
+  {
+    "id": "qa_simple_20",
+    "scenario": "knowledge_qa_simple",
+    "input": "Milvus和Qdrant有什么区别？",
+    "expected_keywords": [
+      "Milvus",
+      "Qdrant",
+      "分布式",
+      "Rust"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据文档内容，Milvus和Qdrant的主要区别如下：\n\n| 特性 | Milvus | Qdrant |\n| :--- | :--- | :--- |\n| **类型与架构** | **分布式服务** [来源1] | **服务/嵌入式** [来源1] |\n| **开发语言** | Go + C++ [来源1] | Rust [来源1] |\n| **核心特点** | 高性能、水平扩展、生产级 [来"
+  },
+  {
+    "id": "qa_multi_01",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "RAG技术和LangGraph有什么关系？",
+    "expected_keywords": [
+      "RAG",
+      "LangGraph",
+      "Agentic RAG",
+      "pipeline"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 4,
+    "score": 0.75,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档内容，RAG技术和LangGraph是两种不同但可以协同工作的技术，主要关系体现在**LangGraph可以作为实现复杂RAG流程（特别是Agentic RAG）的编排工具**。\n\n具体关系如下：\n\n1.  **技术定位不同**：\n    *   **RAG（检索增强生成）** 是一种技术架构，核心是将信息检索与文本生成相结合，以减少模型幻觉并提供可追溯的答案 [来源2, 9]。\n"
+  },
+  {
+    "id": "qa_multi_02",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "Python和RAG技术有什么关联？",
+    "expected_keywords": [
+      "Python",
+      "RAG",
+      "LangChain",
+      "ChromaDB"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 4,
+    "score": 0.75,
+    "status": "PASS",
+    "answer_preview": "根据文档内容，Python 和 RAG（检索增强生成）技术之间存在着紧密且多层次的关联，主要体现在以下几个方面：\n\n### 1. Python 是实现 RAG 系统的主要编程语言\nRAG 是一项复杂的 AI 工程技术，而 **Python 是构建和实施这类系统的核心语言**。这得益于 Python 在人工智能和机器学习领域的主导地位 [来源4]。文档中列举的 RAG 技术栈中的许多关键组件都基于 "
+  },
+  {
+    "id": "qa_multi_03",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "如何用Python实现RAG系统？",
+    "status": "ERROR",
+    "error": ""
+  },
+  {
+    "id": "qa_multi_04",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "LangGraph相比其他RAG框架有什么优势？",
+    "expected_keywords": [
+      "LangGraph",
+      "可视化",
+      "状态管理",
+      "循环",
+      "LangChain"
+    ],
+    "keyword_hits": 5,
+    "keyword_total": 5,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档，**LangGraph 是一个用于构建基于状态图的 AI Agent 应用的框架**，而 **RAG（检索增强生成）是一种结合检索与生成的技术**。两者并非同一层面的概念，但 LangGraph 可作为编排包含 RAG 在内的复杂 Agent 工作流的框架。\n\n文档中未直接对比 LangGraph 与其他 RAG 框架，但基于其设计特点，可总结出以下潜在优势：\n\n1.  **可视"
+  },
+  {
+    "id": "qa_multi_05",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "Agentic RAG和传统RAG有什么区别？",
+    "expected_keywords": [
+      "Agentic RAG",
+      "意图路由",
+      "查询改写",
+      "自我评估",
+      "问题分解"
+    ],
+    "keyword_hits": 5,
+    "keyword_total": 5,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据文档内容，Agentic RAG 与传统 RAG 的主要区别在于**是否引入了智能体（Agent）的主动决策与优化能力**。\n\n传统 RAG 的工作流程是相对固定的“检索-增强-生成”三步骤 [来源1]。它虽然减少了幻觉、支持知识更新和提供可追溯性 [来源1]，但流程本身是自动化的。\n\n而 Agentic RAG 在此基础上进行了扩展，使系统具备了类似智能体的规划和判断能力 [来源1]。其关键"
+  },
+  {
+    "id": "qa_multi_06",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "机器学习和深度学习有什么关系？",
+    "expected_keywords": [
+      "机器学习",
+      "深度学习",
+      "神经网络",
+      "子集"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档内容，**深度学习是机器学习的一个子集** [来源1]。\n\n具体来说：\n- **机器学习** 是人工智能的一个分支，使计算机能够通过经验自动改进 [来源1]。\n- **深度学习** 是机器学习的子集，它使用多层神经网络来处理复杂模式 [来源1]。\n\n两者的区别与联系在于：\n1. **范围不同**：机器学习包含多种方法（如监督学习、无监督学习、强化学习），而深度学习特指基于多层神经网"
+  },
+  {
+    "id": "qa_multi_07",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "Docker和FastAPI如何配合使用？",
+    "expected_keywords": [
+      "Docker",
+      "FastAPI",
+      "容器化",
+      "Dockerfile"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "Docker 和 FastAPI 可以很好地配合使用，通常用于将 FastAPI 应用容器化，从而实现标准化构建、环境隔离和便捷部署。\n\n根据文档，二者的配合方式主要体现在以下方面：\n\n1.  **使用 Dockerfile 容器化 FastAPI 应用**：\n    可以编写一个 Dockerfile 来定义 FastAPI 应用的运行环境。文档中提供了一个多阶段构建的 Dockerfile 示"
+  },
+  {
+    "id": "qa_multi_08",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "向量数据库在RAG系统中起什么作用？",
+    "expected_keywords": [
+      "向量数据库",
+      "RAG",
+      "嵌入",
+      "检索"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 4,
+    "score": 0.75,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档，向量数据库在 RAG（检索增强生成）系统中扮演着**核心基础设施**的角色，主要负责存储和高效检索信息，是连接知识库与生成模型的关键桥梁。具体作用如下：\n\n1.  **作为 RAG 技术的检索组件**：在 RAG 的工作流程中，第一步就是“检索”[来源1]。向量数据库是专门为此设计的，它存储着由 Embedding 模型转换而来的文本向量（即文档的语义表示）。当用户提出查询时，系"
+  },
+  {
+    "id": "qa_multi_09",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "ChromaDB和Milvus哪个更适合生产环境？",
+    "expected_keywords": [
+      "ChromaDB",
+      "Milvus",
+      "生产环境",
+      "原型"
+    ],
+    "keyword_hits": 4,
+    "keyword_total": 4,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档内容，**Milvus 比 ChromaDB 更适合生产环境**，尤其是大规模生产环境。\n\n具体原因如下：\n\n1.  **定位与适用场景不同**：\n    *   **ChromaDB**：被明确描述为“轻量、零配置、适合原型开发”，其适用场景是“小到中等规模项目” [来源1]。它是一个嵌入式数据库。\n    *   **Milvus**：被描述为“高性能、水平扩展、生产级”的分布"
+  },
+  {
+    "id": "qa_multi_10",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "Python的机器学习生态有哪些库？",
+    "expected_keywords": [
+      "TensorFlow",
+      "PyTorch",
+      "scikit-learn",
+      "NumPy"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 4,
+    "score": 0.75,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档，Python 拥有强大且成熟的机器学习生态系统，主要包含以下库和框架：\n\n### 核心机器学习与深度学习框架\n文档中提到，Python 是人工智能领域的主要应用语言 [来源3]，其机器学习生态的核心库包括：\n*   **TensorFlow**：一个开源的深度学习框架。\n*   **PyTorch**：另一个广泛使用的深度学习框架。\n*   **scikit-learn**：一个"
+  },
+  {
+    "id": "chitchat_01",
+    "scenario": "chitchat",
+    "input": "你好",
+    "expected_keywords": [],
+    "keyword_hits": 0,
+    "keyword_total": 0,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "你好！很高兴见到你！😊 \n\n我是MiMo，由小米大模型Core团队开发的AI助手。有什么我可以帮助你的吗？无论是回答问题、协助思考问题，还是想聊聊天，我都很乐意和你交流！"
+  },
+  {
+    "id": "chitchat_01",
+    "scenario": "chitchat",
+    "input": "你好",
+    "status": "ERROR",
+    "error": "'gbk' codec can't encode character '\\U0001f60a' in position 32: illegal multibyte sequence"
+  },
+  {
+    "id": "chitchat_02",
+    "scenario": "chitchat",
+    "input": "今天天气怎么样？",
+    "expected_keywords": [],
+    "keyword_hits": 0,
+    "keyword_total": 0,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据提供的文档内容，我无法回答关于今天天气的问题。\n\n文档中没有包含任何与天气相关的信息 [来源1-10]。这些文档主要涉及以下技术主题：\n\n- **LangGraph**：AI Agent 框架 [来源1][来源8]\n- **向量数据库**：ChromaDB、Milvus、Qdrant 等 [来源2][来源10]\n- **RAG 技术**：检索增强生成 [来源3][来源9]\n- **FastAP"
+  },
+  {
+    "id": "chitchat_03",
+    "scenario": "chitchat",
+    "input": "你是谁？",
+    "expected_keywords": [],
+    "keyword_hits": 0,
+    "keyword_total": 0,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "你好！我是 **MiMo-v2.5-pro**，由**小米 MiMo 团队**开发的 AI 助手。\n\n我拥有 1 万亿（1T）参数，支持 100 万 token 的上下文窗口，可以处理很长的对话和文档。\n\n很高兴认识你！有什么我可以帮助你的吗？😊"
+  },
+  {
+    "id": "chitchat_04",
+    "scenario": "chitchat",
+    "input": "讲个笑话",
+    "expected_keywords": [],
+    "keyword_hits": 0,
+    "keyword_total": 0,
+    "score": 0.5,
+    "status": "PASS",
+    "answer_preview": "好的，来一个 😄\n\n---\n\n小明问爸爸：\"爸爸，'惊喜'用英语怎么说？\"\n\n爸爸说：\"Surprise。\"\n\n小明又问：\"'恐惧'呢？\"\n\n爸爸说：\"Fear。\"\n\n小明再问：\"'孤独'呢？\"\n\n爸爸有点奇怪：\"Lonely，你到底在学什么？\"\n\n小明认真地说：\"那'Surprise Fear Lonely'就是——'惊不惊喜，意不意外，刺不刺激'！\"\n\n爸爸：\"……\"\n\n---\n\n希望这个能让"
+  },
+  {
+    "id": "chitchat_04",
+    "scenario": "chitchat",
+    "input": "讲个笑话",
+    "status": "ERROR",
+    "error": "'gbk' codec can't encode character '\\U0001f604' in position 29: illegal multibyte sequence"
+  },
+  {
+    "id": "chitchat_05",
+    "scenario": "chitchat",
+    "input": "1+1等于几？",
+    "expected_keywords": [],
+    "keyword_hits": 0,
+    "keyword_total": 0,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档内容，**无法回答“1+1等于几？”这个问题**。\n\n[来源1] 到 [来源10] 的所有文档内容均围绕**技术主题**展开，具体包括：\n- 机器学习基础 [来源1]\n- 向量数据库对比 [来源2]\n- Python 编程语言 [来源3]\n- FastAPI 框架 [来源4]\n- RAG（检索增强生成）技术 [来源5][来源8]\n- LangGraph Agent 框架 [来源6]"
+  },
+  {
+    "id": "chitchat_06",
+    "scenario": "chitchat",
+    "input": "谢谢",
+    "expected_keywords": [],
+    "keyword_hits": 0,
+    "keyword_total": 0,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "不客气！很高兴能帮到您。如果有其他问题，随时欢迎问我哦~ 😊"
+  },
+  {
+    "id": "chitchat_06",
+    "scenario": "chitchat",
+    "input": "谢谢",
+    "status": "ERROR",
+    "error": "'gbk' codec can't encode character '\\U0001f60a' in position 51: illegal multibyte sequence"
+  },
+  {
+    "id": "multi_turn_01",
+    "scenario": "multi_turn",
+    "input": "它的最新版本是什么？",
+    "expected_keywords": [
+      "Python 3.14"
+    ],
+    "keyword_hits": 1,
+    "keyword_total": 1,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "您好！您问的\"它\"是指哪个技术或工具呢？\n\n根据检索到的文档，我了解到以下一些技术的版本信息：\n\n- **Python**：当前最新稳定版本为 Python 3.14，推荐使用 Python 3.11+ 版本 [来源1]\n\n如果您问的是 Python，那答案就是 **Python 3.14** [来源1]。\n\n但如果\"它\"指的是其他技术（比如某个向量数据库、FastAPI、LangGraph 等）"
+  },
+  {
+    "id": "multi_turn_02",
+    "scenario": "multi_turn",
+    "input": "它的核心组件有哪些？",
+    "status": "ERROR",
+    "error": ""
+  },
+  {
+    "id": "multi_turn_03",
+    "scenario": "multi_turn",
+    "input": "它有哪些优势？",
+    "expected_keywords": [
+      "减少幻觉",
+      "知识可更新",
+      "可追溯"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 3,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "由于您的问题“它有哪些优势？”中“它”的指代不明确，我将基于检索到的文档内容，推测您可能询问的是 **RAG（检索增强生成）技术** 的优势，因为该技术在文档中有专门的优势介绍。\n\n**RAG 技术的优势如下：**\n1.  **减少幻觉**：基于真实文档生成回答，降低大语言模型编造信息的概率 [来源3]。\n2.  **知识可更新**：只需更新知识库，无需重新训练模型，即可获取最新信息 [来源3]。"
+  },
+  {
+    "id": "multi_turn_04",
+    "scenario": "multi_turn",
+    "input": "怎么用它部署应用？",
+    "expected_keywords": [
+      "Dockerfile",
+      "镜像",
+      "容器"
+    ],
+    "keyword_hits": 3,
+    "keyword_total": 3,
+    "score": 1.0,
+    "status": "PASS",
+    "answer_preview": "根据检索到的文档内容，关于“如何部署应用”的问题，**主要信息集中在FastAPI框架的部署方式**，并且详细提到了使用Docker进行容器化部署。文档中没有一个统一的“它”，但根据上下文，最相关的是FastAPI的部署。\n\n### FastAPI 应用的部署方式\n\n根据文档，部署FastAPI应用主要有以下几种方式 [来源1]：\n\n1.  **使用Uvicorn**：\n    *   Uvico"
+  },
+  {
+    "id": "multi_turn_05",
+    "scenario": "multi_turn",
+    "input": "它和PyTorch哪个好？",
+    "expected_keywords": [
+      "TensorFlow",
+      "PyTorch"
+    ],
+    "keyword_hits": 1,
+    "keyword_total": 2,
+    "score": 0.5,
+    "status": "PASS",
+    "answer_preview": "要比较 LangGraph 和 PyTorch，首先需要明确它们的定位完全不同，因此“哪个好”取决于你的具体需求。它们不是直接竞争关系，而是服务于不同目的的工具。\n\n根据提供的文档，两者对比如下：\n\n**1. 核心功能与定位**\n\n*   **LangGraph** 是一个 **AI Agent 和工作流编排框架**。它的核心是构建基于状态图（StateGraph）的复杂应用流程 [来源4]。它擅"
+  }
+]

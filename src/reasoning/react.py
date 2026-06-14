@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import structlog
 
-from ..gateway.client import LLMClient, LLMResponse
+from ..gateway.client import LLMClient
 from ..memory.manager import MemoryManager
 from ..tools.registry import ToolRegistry
 
 logger = structlog.get_logger(__name__)
 
 
-class StepType(str, Enum):
+class StepType(StrEnum):
     THOUGHT = "thought"
     ACTION = "action"
     OBSERVATION = "observation"
@@ -84,7 +84,11 @@ class ReActEngine:
         system_prompt = REACT_SYSTEM_PROMPT.format(tools=tool_descriptions or "No tools available.")
 
         context = self.memory.get_context()
-        messages = [{"role": "system", "content": system_prompt}, *context, {"role": "user", "content": query}]
+        messages = [
+            {"role": "system", "content": system_prompt},
+            *context,
+            {"role": "user", "content": query},
+        ]
 
         logger.info("react_start", query=query[:200])
 
@@ -103,7 +107,12 @@ class ReActEngine:
                     obs = Step(type=StepType.OBSERVATION, content=result)
                     steps.append(obs)
                     messages.append({"role": "user", "content": f"OBSERVATION: {result}"})
-                    logger.info("react_step", iteration=iteration, tool=step.tool_name, result_length=len(result))
+                    logger.info(
+                        "react_step",
+                        iteration=iteration,
+                        tool=step.tool_name,
+                        result_length=len(result),
+                    )
 
                 if step.type == StepType.ANSWER:
                     self.memory.add_message("user", query)
@@ -117,7 +126,12 @@ class ReActEngine:
                     )
 
         fallback = "I was unable to reach a conclusion within the iteration limit."
-        return ReActResult(answer=fallback, steps=steps, total_iterations=self.max_iterations, total_tokens=total_tokens)
+        return ReActResult(
+            answer=fallback,
+            steps=steps,
+            total_iterations=self.max_iterations,
+            total_tokens=total_tokens,
+        )
 
     def _parse_response(self, text: str) -> list[Step]:
         steps: list[Step] = []
@@ -129,12 +143,14 @@ class ReActEngine:
             stripped = line.strip()
             if stripped.startswith("THOUGHT:"):
                 if current_type:
-                    steps.append(Step(type=current_type, content="\n".join(current_content).strip()))
+                    content = "\n".join(current_content).strip()
+                    steps.append(Step(type=current_type, content=content))
                 current_type = StepType.THOUGHT
                 current_content = [stripped[len("THOUGHT:") :].strip()]
             elif stripped.startswith("ACTION:"):
                 if current_type and current_type != StepType.THOUGHT:
-                    steps.append(Step(type=current_type, content="\n".join(current_content).strip()))
+                    content = "\n".join(current_content).strip()
+                    steps.append(Step(type=current_type, content=content))
                 current_type = StepType.ACTION
                 tool_name = stripped[len("ACTION:") :].strip()
                 current_content = [tool_name]
@@ -145,12 +161,18 @@ class ReActEngine:
                     args = json.loads(stripped[len("ACTION_INPUT:") :].strip())
                 except json.JSONDecodeError:
                     args = {}
-                steps.append(Step(type=StepType.ACTION, content=str(current_content), tool_name=current_content[0] if current_content else None, tool_args=args))
+                steps.append(Step(
+                    type=StepType.ACTION,
+                    content=str(current_content),
+                    tool_name=current_content[0] if current_content else None,
+                    tool_args=args,
+                ))
                 current_type = None
                 current_content = []
             elif stripped.startswith("ANSWER:"):
                 if current_type:
-                    steps.append(Step(type=current_type, content="\n".join(current_content).strip()))
+                    content = "\n".join(current_content).strip()
+                    steps.append(Step(type=current_type, content=content))
                 current_type = StepType.ANSWER
                 current_content = [stripped[len("ANSWER:") :].strip()]
             else:
