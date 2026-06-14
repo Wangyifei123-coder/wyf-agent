@@ -236,19 +236,19 @@ async def chat_stream(
 
     user = _get_current_user(authorization)
     if not user:
-        async def unauthorized():
+        async def unauthorized() -> Any:
             yield f"data: {json.dumps({'error': 'Unauthorized'})}\n\n"
         return StreamingResponse(unauthorized(), media_type="text/event-stream")
 
     safety_check = safety_guard.check_input(request.message)
     if not safety_check.safe:
-        async def rejected():
+        async def rejected() -> Any:
             yield f"data: {json.dumps({'error': safety_check.reason})}\n\n"
         return StreamingResponse(rejected(), media_type="text/event-stream")
 
     start = time.monotonic()
 
-    async def generate():
+    async def generate() -> Any:
         full_answer = ""
         intent = "knowledge_qa"
         sources: list[str] = []
@@ -385,7 +385,7 @@ async def prometheus_metrics() -> Any:
 
     if vector_store:
         stats = vector_store.get_collection_stats()
-        KNOWLEDGE_DOCS.set(stats.get("count", 0))
+        KNOWLEDGE_DOCS.set(float(stats.get("count", 0)))
 
     return Response(
         content=generate_latest(),

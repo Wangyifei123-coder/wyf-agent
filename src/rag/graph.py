@@ -384,7 +384,7 @@ class RAGGraph:
         query: str,
         conversation_history: list[dict[str, str]] | None = None,
         uploaded_doc: str | None = None,
-    ):
+    ) -> Any:
 
         initial_state: RAGState = {
             "query": query,
@@ -393,8 +393,8 @@ class RAGGraph:
             "iteration": 0,
         }
 
-        state = dict(initial_state)
-        state.update(await self._route_intent(state))
+        state: RAGState = dict(initial_state)  # type: ignore[assignment]
+        state.update(await self._route_intent(state))  # type: ignore[typeddict-item]
 
         intent = state.get("intent", Intent.KNOWLEDGE_QA)
         intent_value = intent.value if hasattr(intent, "value") else str(intent)
@@ -407,7 +407,7 @@ class RAGGraph:
                 messages.extend(conversation_history[-6:])
             messages.append({"role": "user", "content": query})
 
-            async def chitchat_stream():
+            async def chitchat_stream() -> Any:
                 async for chunk in self.llm.stream_chat(messages):
                     yield chunk
 
@@ -428,21 +428,21 @@ class RAGGraph:
             yield {"type": "done"}
             return
 
-        state.update(await self._rewrite_query(state))
-        state.update(await self._retrieve(state))
-        state.update(await self._evaluate(state))
+        state.update(await self._rewrite_query(state))  # type: ignore[typeddict-item]
+        state.update(await self._retrieve(state))  # type: ignore[typeddict-item]
+        state.update(await self._evaluate(state))  # type: ignore[typeddict-item]
 
         iteration = 0
         while state.get("evaluation") != "sufficient" and iteration < MAX_ITERATIONS:
             if state.get("evaluation") == "needs_decompose":
-                state.update(await self._decompose(state))
+                state.update(await self._decompose(state))  # type: ignore[typeddict-item]
             else:
-                state.update(await self._refine_query(state))
-            state.update(await self._retrieve(state))
-            state.update(await self._evaluate(state))
+                state.update(await self._refine_query(state))  # type: ignore[typeddict-item]
+            state.update(await self._retrieve(state))  # type: ignore[typeddict-item]
+            state.update(await self._evaluate(state))  # type: ignore[typeddict-item]
             iteration += 1
 
-        docs = state.get("retrieved_docs", [])
+        docs: list[Document] = state.get("retrieved_docs", [])
         sources = [doc.metadata.get("source", f"来源{i+1}") for i, doc in enumerate(docs)]
 
         context = "\n\n".join(f"[来源{i+1}] {doc.content}" for i, doc in enumerate(docs))

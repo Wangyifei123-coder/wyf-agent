@@ -69,7 +69,7 @@ class VectorStore:
     def delete_by_source(self, source: str) -> int:
         try:
             results = self._collection.get(
-                where={"source": source},  # type: ignore[arg-type]
+                where={"source": source},
             )
             if results and results["ids"]:
                 count = len(results["ids"])
