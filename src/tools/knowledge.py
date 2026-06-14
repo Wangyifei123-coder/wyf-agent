@@ -1,7 +1,10 @@
 """知识检索工具 — 注册到 ToolRegistry 供 ReAct 引擎调用"""
 from __future__ import annotations
+
 from typing import Any
+
 import structlog
+
 from .registry import Tool, ToolParameter, ToolSchema
 
 logger = structlog.get_logger(__name__)
@@ -16,7 +19,12 @@ class KnowledgeSearchTool(Tool):
             name="search_knowledge_base",
             description="从知识库中检索相关信息并回答问题",
             parameters=[
-                ToolParameter(name="query", type="string", description="用户的检索问题", required=True),
+                ToolParameter(
+                    name="query",
+                    type="string",
+                    description="用户的检索问题",
+                    required=True,
+                ),
             ],
         )
 

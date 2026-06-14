@@ -17,7 +17,7 @@ def _split_by_separators(
     if _count_tokens(text) <= chunk_size:
         return [text] if text.strip() else []
 
-    for i, sep in enumerate(separators):
+    for _i, sep in enumerate(separators):
         if sep == "":
             chunks: list[str] = []
             start = 0

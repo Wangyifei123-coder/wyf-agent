@@ -17,8 +17,14 @@ from .gateway.client import LLMClient, LLMConfig
 from .memory.manager import MemoryManager
 from .observability.logger import setup_logging
 from .observability.tracer import Tracer
+from .rag.embeddings import EmbeddingService
+from .rag.graph import RAGGraph
+from .rag.loader import load_directory
+from .rag.retriever import Retriever
+from .rag.vectorstore import VectorStore
 from .reasoning.react import ReActEngine
 from .safety.guard import SafetyGuard
+from .tools.knowledge import KnowledgeSearchTool
 from .tools.registry import ToolRegistry
 
 _env_path = Path(__file__).parent.parent / "config" / ".env"
@@ -32,11 +38,13 @@ react_engine: ReActEngine | None = None
 memory_manager: MemoryManager | None = None
 safety_guard: SafetyGuard | None = None
 tracer: Tracer | None = None
+rag_graph: RAGGraph | None = None
+vector_store: VectorStore | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    global llm_client, react_engine, memory_manager, safety_guard, tracer
+    global llm_client, react_engine, memory_manager, safety_guard, tracer, rag_graph, vector_store
 
     setup_logging(level=os.getenv("LOG_LEVEL", "INFO"), format="json")
 
@@ -51,6 +59,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     safety_guard = SafetyGuard()
     tracer = Tracer()
     tool_registry = ToolRegistry()
+
+    embedding_service = EmbeddingService()
+    vector_store = VectorStore(embedding_service=embedding_service)
+    retriever = Retriever(vector_store)
+    rag_graph = RAGGraph(llm_client, retriever)
+
+    knowledge_tool = KnowledgeSearchTool(rag_graph)
+    tool_registry.register(knowledge_tool)
+
     react_engine = ReActEngine(llm_client, tool_registry, memory_manager)
 
     logger.info("agent_initialized")
@@ -106,6 +123,33 @@ async def metrics() -> dict[str, Any]:
         "token_usage": llm_client.token_counter.summary(),
         "tracing": tracer.summary(),
     }
+
+
+class IngestRequest(BaseModel):
+    path: str
+
+
+class IngestResponse(BaseModel):
+    documents_loaded: int
+    chunks_created: int
+
+
+@app.post("/knowledge/ingest", response_model=IngestResponse)
+async def ingest_knowledge(request: IngestRequest) -> IngestResponse:
+    assert vector_store
+    from .rag.splitter import split_documents
+
+    docs = load_directory(request.path)
+    chunks = split_documents(docs)
+    vector_store.add_documents(chunks)
+    logger.info("knowledge_ingested", path=request.path, docs=len(docs), chunks=len(chunks))
+    return IngestResponse(documents_loaded=len(docs), chunks_created=len(chunks))
+
+
+@app.get("/knowledge/stats")
+async def knowledge_stats() -> dict[str, Any]:
+    assert vector_store
+    return vector_store.get_collection_stats()
 
 
 def main() -> None:

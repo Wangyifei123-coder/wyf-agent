@@ -102,7 +102,7 @@ class RAGGraph:
         self.retriever = retriever
         self._graph = self._build_graph()
 
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self) -> StateGraph[RAGState]:
         graph = StateGraph(RAGState)
 
         graph.add_node("route_intent", self._route_intent)
@@ -122,9 +122,9 @@ class RAGGraph:
             "route_intent",
             self._route_decision,
             {
-                Intent.CHITCHAT: "generate_direct",
-                Intent.DOC_ANALYSIS: "generate_with_context",
-                Intent.KNOWLEDGE_QA: "rag_loop",
+                "chitchat": "generate_direct",
+                "doc_analysis": "generate_with_context",
+                "knowledge_qa": "rag_loop",
             },
         )
 
@@ -151,7 +151,10 @@ class RAGGraph:
         return graph
 
     def _route_decision(self, state: RAGState) -> str:
-        return state.get("intent", Intent.KNOWLEDGE_QA)
+        intent = state.get("intent", Intent.KNOWLEDGE_QA)
+        if isinstance(intent, Intent):
+            return intent.value
+        return str(intent)
 
     def _evaluate_decision(self, state: RAGState) -> str:
         evaluation = state.get("evaluation", "sufficient")
@@ -348,7 +351,7 @@ class RAGGraph:
         }
 
         compiled = self._graph.compile()
-        final_state = await compiled.ainvoke(initial_state)
+        final_state: RAGState = await compiled.ainvoke(initial_state)  # type: ignore[assignment]
 
         logger.info(
             "rag_complete",

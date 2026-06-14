@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
+import os
+from typing import Any
+
 import structlog
 
 logger = structlog.get_logger(__name__)
+
+if not os.environ.get("HF_ENDPOINT"):
+    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
 
 class EmbeddingService:
     def __init__(self, model_name: str = "shibing624/text2vec-base-chinese") -> None:
         self.model_name = model_name
-        self._model = None
+        self._model: Any = None
 
-    def _load_model(self):
+    def _load_model(self) -> Any:
         if self._model is None:
             from sentence_transformers import SentenceTransformer
             logger.info("loading_embedding_model", model=self.model_name)
@@ -23,11 +29,13 @@ class EmbeddingService:
     def embed_query(self, query: str) -> list[float]:
         model = self._load_model()
         vec = model.encode(query, normalize_embeddings=True)
-        return vec.tolist()
+        return list(vec.tolist())
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
         model = self._load_model()
-        vecs = model.encode(texts, normalize_embeddings=True, batch_size=32, show_progress_bar=False)
+        vecs = model.encode(
+            texts, normalize_embeddings=True, batch_size=32, show_progress_bar=False,
+        )
         return [v.tolist() for v in vecs]

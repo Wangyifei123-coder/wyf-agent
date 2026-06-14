@@ -32,5 +32,10 @@ class Retriever:
         results = [doc for _, doc in sorted_results[:top_k]]
         for i, doc in enumerate(results):
             doc.metadata["final_rank"] = i + 1
-        logger.info("retrieval_complete", query=query[:50], candidates=len(candidates), results=len(results))
+        logger.info(
+            "retrieval_complete",
+            query=query[:50],
+            candidates=len(candidates),
+            results=len(results),
+        )
         return results
