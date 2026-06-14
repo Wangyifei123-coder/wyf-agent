@@ -329,7 +329,9 @@ class RAGGraph:
         query = state["query"]
         history = state.get("conversation_history", [])
 
-        messages: list[dict[str, str]] = []
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": "你是一个友好的AI助手。请用自然、友好的方式回答用户的问题。"},
+        ]
         if history:
             messages.extend(history[-6:])
         messages.append({"role": "user", "content": query})
