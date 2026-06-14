@@ -94,6 +94,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     tool_registry = ToolRegistry()
 
     embedding_service = EmbeddingService()
+    logger.info("prewarming_embedding_model")
+    embedding_service.embed_query("warmup")
+    logger.info("embedding_model_ready")
+
     vector_store = VectorStore(embedding_service=embedding_service)
     vector_retriever = Retriever(vector_store)
 
@@ -195,6 +199,8 @@ async def chat(
     result = await rag_graph.run(request.message)
     answer = _strip_emoji(result.get("answer", ""))
     intent = result.get("intent", "knowledge_qa")
+    if hasattr(intent, "value"):
+        intent = intent.value
 
     output_check = safety_guard.check_output(answer)
     if not output_check.safe:
@@ -242,38 +248,51 @@ async def chat_stream(
 
     start = time.monotonic()
 
-    result = await rag_graph.run(request.message)
-    answer = _strip_emoji(result.get("answer", ""))
-    intent = result.get("intent", "knowledge_qa")
-    sources = result.get("sources", [])
-
-    output_check = safety_guard.check_output(answer)
-    if not output_check.safe:
-        answer = safety_guard.redact_pii(answer)
-
-    memory_manager.add_message("user", request.message)
-    memory_manager.add_message("assistant", answer)
-
-    elapsed = time.monotonic() - start
-    REQUEST_COUNT.labels(endpoint="/chat/stream", status="success").inc()
-    REQUEST_LATENCY.labels(endpoint="/chat/stream").observe(elapsed)
-    CHAT_COUNT.labels(intent=str(intent)).inc()
-
-    chunk_size = 20
-
     async def generate():
-        for i in range(0, len(answer), chunk_size):
-            chunk = answer[i:i + chunk_size]
-            data = json.dumps({'chunk': chunk, 'done': False}, ensure_ascii=False)
-            yield f"data: {data}\n\n"
-            import asyncio
-            await asyncio.sleep(0.05)
+        full_answer = ""
+        intent = "knowledge_qa"
+        sources: list[str] = []
 
-        final = json.dumps(
-            {'chunk': '', 'done': True, 'intent': str(intent), 'sources': sources},
-            ensure_ascii=False,
-        )
-        yield f"data: {final}\n\n"
+        async for event in rag_graph.run_stream(request.message):
+            event_type = event.get("type")
+
+            if event_type == "intent":
+                intent = event.get("intent", intent)
+                sources = event.get("sources", [])
+                data = json.dumps(
+                    {'type': 'intent', 'intent': intent},
+                    ensure_ascii=False,
+                )
+                yield f"data: {data}\n\n"
+
+            elif event_type == "chunk":
+                chunk = event.get("content", "")
+                full_answer += chunk
+                data = json.dumps(
+                    {'type': 'chunk', 'chunk': chunk},
+                    ensure_ascii=False,
+                )
+                yield f"data: {data}\n\n"
+
+            elif event_type == "done":
+                answer = _strip_emoji(full_answer)
+                output_check = safety_guard.check_output(answer)
+                if not output_check.safe:
+                    answer = safety_guard.redact_pii(answer)
+
+                memory_manager.add_message("user", request.message)
+                memory_manager.add_message("assistant", answer)
+
+                elapsed = time.monotonic() - start
+                REQUEST_COUNT.labels(endpoint="/chat/stream", status="success").inc()
+                REQUEST_LATENCY.labels(endpoint="/chat/stream").observe(elapsed)
+                CHAT_COUNT.labels(intent=str(intent)).inc()
+
+                data = json.dumps(
+                    {'type': 'done', 'intent': intent, 'sources': sources},
+                    ensure_ascii=False,
+                )
+                yield f"data: {data}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 

@@ -207,16 +207,17 @@ if prompt := st.chat_input("输入你的问题..."):
                         if not line.startswith("data: "):
                             continue
                         data = _json.loads(line[6:])
-                        if data.get("error"):
-                            st.error(data["error"])
-                            break
-                        if data.get("done"):
+                        msg_type = data.get("type", "")
+                        if msg_type == "intent":
+                            intent = data.get("intent", intent)
+                        elif msg_type == "chunk":
+                            chunk = data.get("chunk", "")
+                            full_answer += chunk
+                            placeholder.markdown(full_answer)
+                        elif msg_type == "done":
                             intent = data.get("intent", intent)
                             sources = data.get("sources", [])
                             break
-                        chunk = data.get("chunk", "")
-                        full_answer += chunk
-                        placeholder.markdown(full_answer)
         except Exception as e:
             st.error(f"请求失败: {e}")
 

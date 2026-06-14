@@ -330,7 +330,7 @@ class RAGGraph:
         history = state.get("conversation_history", [])
 
         messages: list[dict[str, str]] = [
-            {"role": "system", "content": "你是一个友好的AI助手。请用自然、友好的方式回答用户的问题。"},
+            {"role": "system", "content": "你是一个友好的AI助手,用自然友好的方式回答问题。"},
         ]
         if history:
             messages.extend(history[-6:])
@@ -378,3 +378,78 @@ class RAGGraph:
             iterations=final_state.get("iteration", 0),
         )
         return final_state
+
+    async def run_stream(
+        self,
+        query: str,
+        conversation_history: list[dict[str, str]] | None = None,
+        uploaded_doc: str | None = None,
+    ):
+
+        initial_state: RAGState = {
+            "query": query,
+            "conversation_history": conversation_history or [],
+            "uploaded_doc": uploaded_doc,
+            "iteration": 0,
+        }
+
+        state = dict(initial_state)
+        state.update(await self._route_intent(state))
+
+        intent = state.get("intent", Intent.KNOWLEDGE_QA)
+        intent_value = intent.value if hasattr(intent, "value") else str(intent)
+
+        if intent_value == "chitchat":
+            messages: list[dict[str, str]] = [
+                {"role": "system", "content": "你是一个友好的AI助手,用自然友好的方式回答问题。"},
+            ]
+            if conversation_history:
+                messages.extend(conversation_history[-6:])
+            messages.append({"role": "user", "content": query})
+
+            async def chitchat_stream():
+                async for chunk in self.llm.stream_chat(messages):
+                    yield chunk
+
+            yield {"type": "intent", "intent": intent_value, "sources": []}
+            async for chunk in chitchat_stream():
+                yield {"type": "chunk", "content": chunk}
+            yield {"type": "done"}
+            return
+
+        if intent_value == "doc_analysis" and uploaded_doc:
+            context = f"用户上传的文档内容:\n{uploaded_doc}"
+            prompt = GENERATE_PROMPT.format(context=context, query=query)
+            messages = [{"role": "user", "content": prompt}]
+
+            yield {"type": "intent", "intent": intent_value, "sources": ["uploaded_document"]}
+            async for chunk in self.llm.stream_chat(messages):
+                yield {"type": "chunk", "content": chunk}
+            yield {"type": "done"}
+            return
+
+        state.update(await self._rewrite_query(state))
+        state.update(await self._retrieve(state))
+        state.update(await self._evaluate(state))
+
+        iteration = 0
+        while state.get("evaluation") != "sufficient" and iteration < MAX_ITERATIONS:
+            if state.get("evaluation") == "needs_decompose":
+                state.update(await self._decompose(state))
+            else:
+                state.update(await self._refine_query(state))
+            state.update(await self._retrieve(state))
+            state.update(await self._evaluate(state))
+            iteration += 1
+
+        docs = state.get("retrieved_docs", [])
+        sources = [doc.metadata.get("source", f"来源{i+1}") for i, doc in enumerate(docs)]
+
+        context = "\n\n".join(f"[来源{i+1}] {doc.content}" for i, doc in enumerate(docs))
+        prompt = GENERATE_PROMPT.format(context=context, query=query)
+        messages = [{"role": "user", "content": prompt}]
+
+        yield {"type": "intent", "intent": intent_value, "sources": sources}
+        async for chunk in self.llm.stream_chat(messages):
+            yield {"type": "chunk", "content": chunk}
+        yield {"type": "done"}
