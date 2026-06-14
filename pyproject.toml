@@ -19,6 +19,8 @@ dependencies = [
     "pyyaml>=6.0.2",
     "python-dotenv>=1.0.1",
     "uv>=0.6.0",
+    "langgraph>=0.2.0",
+    "pypdf2>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +48,7 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
+ignore = ["RUF001"]
 
 [tool.mypy]
 python_version = "3.11"
