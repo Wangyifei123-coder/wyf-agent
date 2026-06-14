@@ -216,6 +216,68 @@ async def chat(
     )
 
 
+@app.post("/chat/stream")
+async def chat_stream(
+    request: ChatRequest,
+    authorization: str | None = Header(None),
+) -> Any:
+    import json
+    import time
+
+    from fastapi.responses import StreamingResponse
+
+    assert safety_guard and rag_graph and memory_manager
+
+    user = _get_current_user(authorization)
+    if not user:
+        async def unauthorized():
+            yield f"data: {json.dumps({'error': 'Unauthorized'})}\n\n"
+        return StreamingResponse(unauthorized(), media_type="text/event-stream")
+
+    safety_check = safety_guard.check_input(request.message)
+    if not safety_check.safe:
+        async def rejected():
+            yield f"data: {json.dumps({'error': safety_check.reason})}\n\n"
+        return StreamingResponse(rejected(), media_type="text/event-stream")
+
+    start = time.monotonic()
+
+    result = await rag_graph.run(request.message)
+    answer = _strip_emoji(result.get("answer", ""))
+    intent = result.get("intent", "knowledge_qa")
+    sources = result.get("sources", [])
+
+    output_check = safety_guard.check_output(answer)
+    if not output_check.safe:
+        answer = safety_guard.redact_pii(answer)
+
+    memory_manager.add_message("user", request.message)
+    memory_manager.add_message("assistant", answer)
+
+    elapsed = time.monotonic() - start
+    REQUEST_COUNT.labels(endpoint="/chat/stream", status="success").inc()
+    REQUEST_LATENCY.labels(endpoint="/chat/stream").observe(elapsed)
+    CHAT_COUNT.labels(intent=str(intent)).inc()
+
+    chunk_size = 20
+
+    async def generate():
+        for i in range(0, len(answer), chunk_size):
+            chunk = answer[i:i + chunk_size]
+            data = json.dumps({'chunk': chunk, 'done': False}, ensure_ascii=False)
+            yield f"data: {data}\n\n"
+            import asyncio
+            await asyncio.sleep(0.05)
+
+        final = json.dumps(
+            {'chunk': '', 'done': True, 'intent': str(intent), 'sources': sources},
+            ensure_ascii=False,
+        )
+        yield f"data: {final}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "version": "0.1.0"}

@@ -187,38 +187,62 @@ if prompt := st.chat_input("输入你的问题..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("思考中..."):
-            response = call_api(
-                "/chat", "POST",
-                {"message": prompt}, token=st.session_state.token,
+        import json as _json
+
+        placeholder = st.empty()
+        full_answer = ""
+        intent = "knowledge_qa"
+        sources: list[str] = []
+
+        try:
+            with httpx.Client(timeout=180) as client:
+                headers = {"Authorization": f"Bearer {st.session_state.token}"}
+                with client.stream(
+                    "POST",
+                    f"{API_BASE}/chat/stream",
+                    json={"message": prompt},
+                    headers=headers,
+                ) as response:
+                    for line in response.iter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        data = _json.loads(line[6:])
+                        if data.get("error"):
+                            st.error(data["error"])
+                            break
+                        if data.get("done"):
+                            intent = data.get("intent", intent)
+                            sources = data.get("sources", [])
+                            break
+                        chunk = data.get("chunk", "")
+                        full_answer += chunk
+                        placeholder.markdown(full_answer)
+        except Exception as e:
+            st.error(f"请求失败: {e}")
+
+        if full_answer:
+            placeholder.markdown(full_answer)
+
+            intent_class = f"intent-{intent}"
+            intent_label = {
+                "chitchat": "闲聊",
+                "knowledge_qa": "知识问答",
+                "doc_analysis": "文档分析",
+            }.get(intent, intent)
+            st.markdown(
+                f'<span class="intent-tag {intent_class}">{intent_label}</span>',
+                unsafe_allow_html=True,
             )
 
-        answer = response.get("answer", "抱歉，无法获取回答。")
-        sources = response.get("sources", [])
-        intent = response.get("intent", "knowledge_qa")
-
-        st.markdown(answer)
-
-        intent_class = f"intent-{intent}"
-        intent_label = {
-            "chitchat": "闲聊",
-            "knowledge_qa": "知识问答",
-            "doc_analysis": "文档分析",
-        }.get(intent, intent)
-        st.markdown(
-            f'<span class="intent-tag {intent_class}">{intent_label}</span>',
-            unsafe_allow_html=True,
-        )
-
-        if sources:
-            source_html = "".join(
-                f'<span class="source-tag">{s}</span>' for s in sources
-            )
-            st.markdown(f"**引用来源:** {source_html}", unsafe_allow_html=True)
+            if sources:
+                source_html = "".join(
+                    f'<span class="source-tag">{s}</span>' for s in sources
+                )
+                st.markdown(f"**引用来源:** {source_html}", unsafe_allow_html=True)
 
     st.session_state.messages.append({
         "role": "assistant",
-        "content": answer,
+        "content": full_answer,
         "intent": intent,
         "sources": sources,
     })
