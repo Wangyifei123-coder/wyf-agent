@@ -66,6 +66,41 @@ class VectorStore:
         self._collection.delete(where=where)  # type: ignore[arg-type]
         logger.info("documents_deleted", where=where)
 
+    def delete_by_source(self, source: str) -> int:
+        try:
+            results = self._collection.get(
+                where={"source": source},  # type: ignore[arg-type]
+            )
+            if results and results["ids"]:
+                count = len(results["ids"])
+                self._collection.delete(ids=results["ids"])
+                logger.info("deleted_by_source", source=source, count=count)
+                return count
+        except Exception as e:
+            logger.warning("delete_by_source_failed", source=source, error=str(e))
+        return 0
+
+    def get_all_sources(self) -> list[str]:
+        try:
+            results = self._collection.get(include=["metadatas"])
+            if results and results["metadatas"]:
+                sources = set()
+                for meta in results["metadatas"]:
+                    if isinstance(meta, dict) and "source" in meta:
+                        sources.add(meta["source"])
+                return list(sources)
+        except Exception:
+            pass
+        return []
+
+    def clear(self) -> None:
+        self._client.delete_collection(self._collection.name)
+        self._collection = self._client.get_or_create_collection(
+            name=self._collection.name,
+            metadata={"hnsw:space": "cosine"},
+        )
+        logger.info("vectorstore_cleared")
+
     def get_collection_stats(self) -> dict[str, int | str]:
         return {
             "count": self._collection.count(),

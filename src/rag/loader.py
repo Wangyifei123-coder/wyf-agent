@@ -18,6 +18,9 @@ EXTENSION_MAP: dict[str, str] = {
     ".txt": "text",
     ".text": "text",
     ".pdf": "pdf",
+    ".docx": "docx",
+    ".xlsx": "xlsx",
+    ".csv": "csv",
 }
 
 
@@ -47,10 +50,55 @@ def load_pdf(path: str) -> Document:
     return Document(content=text, metadata={"file_type": "pdf", "source": path})
 
 
+def load_docx(path: str) -> Document:
+    from docx import Document as DocxDocument
+
+    doc = DocxDocument(path)
+    paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    text = "\n\n".join(paragraphs)
+    logger.info("loaded_docx", path=path, paragraphs=len(paragraphs), chars=len(text))
+    return Document(content=text, metadata={"file_type": "docx", "source": path})
+
+
+def load_xlsx(path: str) -> Document:
+    from openpyxl import load_workbook
+
+    wb = load_workbook(path, read_only=True, data_only=True)
+    rows: list[str] = []
+    for sheet in wb.worksheets:
+        rows.append(f"=== Sheet: {sheet.title} ===")
+        for row in sheet.iter_rows(values_only=True):
+            row_text = " | ".join(str(cell) if cell is not None else "" for cell in row)
+            if row_text.strip(" |"):
+                rows.append(row_text)
+    wb.close()
+    text = "\n".join(rows)
+    logger.info("loaded_xlsx", path=path, rows=len(rows), chars=len(text))
+    return Document(content=text, metadata={"file_type": "xlsx", "source": path})
+
+
+def load_csv(path: str) -> Document:
+    import csv
+
+    rows: list[str] = []
+    with open(path, encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            row_text = " | ".join(row)
+            if row_text.strip():
+                rows.append(row_text)
+    text = "\n".join(rows)
+    logger.info("loaded_csv", path=path, rows=len(rows), chars=len(text))
+    return Document(content=text, metadata={"file_type": "csv", "source": path})
+
+
 _LOADERS = {
     "markdown": load_markdown,
     "text": load_text,
     "pdf": load_pdf,
+    "docx": load_docx,
+    "xlsx": load_xlsx,
+    "csv": load_csv,
 }
 
 

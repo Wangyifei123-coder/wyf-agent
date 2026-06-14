@@ -42,9 +42,14 @@ class RAGState(TypedDict, total=False):
 
 ROUTE_PROMPT = """你是一个意图分类器。根据用户的问题，将其分类为以下三类之一：
 
-- chitchat: 闲聊、问候、与知识无关的对话
+- chitchat: 闲聊、问候、通用知识问答（如数学计算、常识、笑话、感谢、告别）、与技术知识库无关的问题
 - doc_analysis: 用户上传了文档，要求分析文档内容
-- knowledge_qa: 需要从知识库中检索信息来回答的问题
+- knowledge_qa: 需要从知识库中检索信息来回答的技术问题
+  技术主题包括：Python、RAG、LangGraph、机器学习、Docker、FastAPI、向量数据库等
+
+判断标准：
+- 如果问题不需要检索特定知识库就能回答 → chitchat
+- 如果问题涉及知识库中的技术主题 → knowledge_qa
 
 只返回分类结果，不要返回其他内容。
 

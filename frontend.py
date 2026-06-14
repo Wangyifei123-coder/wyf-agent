@@ -14,7 +14,7 @@ API_BASE = os.getenv("API_BASE", "http://localhost:8080")
 
 st.set_page_config(
     page_title="WYF Agent",
-    page_icon="https://img.icons8.com/color/48/robot-2.png",
+    page_icon=":robot:",
     layout="wide",
 )
 
@@ -45,30 +45,68 @@ def call_api(
     method: str = "GET",
     json_data: dict | None = None,
     timeout: int = 120,
+    token: str | None = None,
 ) -> dict:
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     try:
         with httpx.Client(timeout=timeout) as client:
             if method == "POST":
-                resp = client.post(f"{API_BASE}{endpoint}", json=json_data)
+                resp = client.post(
+                    f"{API_BASE}{endpoint}", json=json_data, headers=headers,
+                )
             else:
-                resp = client.get(f"{API_BASE}{endpoint}")
+                resp = client.get(f"{API_BASE}{endpoint}", headers=headers)
             resp.raise_for_status()
             return resp.json()
     except httpx.ConnectError:
-        st.error("无法连接到后端服务，请确认服务已启动 (python -m uvicorn src.api:app --port 8080)")
+        st.error("无法连接到后端服务")
         st.stop()
     except Exception as e:
         st.error(f"请求失败: {e}")
         return {}
 
 
+if "token" not in st.session_state:
+    st.session_state.token = None
+if "username" not in st.session_state:
+    st.session_state.username = None
+
+if not st.session_state.token:
+    st.title("WYF Agent 登录")
+    with st.form("login_form"):
+        username = st.text_input("用户名")
+        password = st.text_input("密码", type="password")
+        submitted = st.form_submit_button("登录", use_container_width=True)
+        if submitted:
+            result = call_api(
+                "/auth/login", "POST",
+                {"username": username, "password": password},
+            )
+            if result.get("success"):
+                st.session_state.token = result["token"]
+                st.session_state.username = result["username"]
+                st.rerun()
+            else:
+                st.error(result.get("error", "登录失败"))
+
+    st.info("演示账号: admin/admin123 或 user/user123")
+    st.stop()
+
 with st.sidebar:
     st.title("WYF Agent")
+    st.text(f"当前用户: {st.session_state.username}")
+    if st.button("退出登录", use_container_width=True):
+        st.session_state.token = None
+        st.session_state.username = None
+        st.rerun()
+
     st.markdown("---")
 
     st.subheader("知识库状态")
     try:
-        stats = call_api("/knowledge/stats")
+        stats = call_api("/knowledge/stats", token=st.session_state.token)
         st.metric("文档数量", stats.get("count", 0))
     except Exception:
         st.warning("无法获取知识库状态")
@@ -78,7 +116,7 @@ with st.sidebar:
     st.subheader("文档入库")
     uploaded_files = st.file_uploader(
         "上传文档到知识库",
-        type=["md", "txt", "pdf"],
+        type=["md", "txt", "pdf", "docx", "xlsx", "csv"],
         accept_multiple_files=True,
     )
     if uploaded_files and st.button("开始入库", use_container_width=True):
@@ -89,7 +127,10 @@ with st.sidebar:
                 with open(filepath, "wb") as out:
                     out.write(f.getvalue())
             with st.spinner("正在入库..."):
-                result = call_api("/knowledge/ingest", "POST", {"path": tmpdir})
+                result = call_api(
+                    "/knowledge/ingest", "POST",
+                    {"path": tmpdir}, token=st.session_state.token,
+                )
                 st.success(
                     f"入库完成: {result.get('documents_loaded', 0)} 篇文档, "
                     f"{result.get('chunks_created', 0)} 个 chunk"
@@ -99,7 +140,7 @@ with st.sidebar:
 
     st.subheader("系统信息")
     try:
-        health = call_api("/health")
+        health = call_api("/health", token=st.session_state.token)
         st.text(f"状态: {health.get('status', 'unknown')}")
         st.text(f"版本: {health.get('version', 'unknown')}")
     except Exception:
@@ -147,7 +188,10 @@ if prompt := st.chat_input("输入你的问题..."):
 
     with st.chat_message("assistant"):
         with st.spinner("思考中..."):
-            response = call_api("/chat", "POST", {"message": prompt})
+            response = call_api(
+                "/chat", "POST",
+                {"message": prompt}, token=st.session_state.token,
+            )
 
         answer = response.get("answer", "抱歉，无法获取回答。")
         sources = response.get("sources", [])

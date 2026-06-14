@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import os
-
-os.environ.setdefault("PYTHONIOENCODING", "utf-8")
-
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -13,12 +11,19 @@ from typing import Any
 
 import structlog
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from pydantic import BaseModel
 
 from .gateway.client import LLMClient, LLMConfig
 from .memory.manager import MemoryManager
 from .observability.logger import setup_logging
+from .observability.metrics import (
+    ACTIVE_SESSIONS,
+    CHAT_COUNT,
+    KNOWLEDGE_DOCS,
+    REQUEST_COUNT,
+    REQUEST_LATENCY,
+)
 from .observability.tracer import Tracer
 from .rag.bm25_retriever import BM25Retriever
 from .rag.embeddings import EmbeddingService
@@ -29,6 +34,7 @@ from .rag.loader import load_directory
 from .rag.retriever import Retriever
 from .rag.vectorstore import VectorStore
 from .reasoning.react import ReActEngine
+from .safety.auth import authenticate, verify_token
 from .safety.guard import SafetyGuard
 from .tools.registry import ToolRegistry
 
@@ -46,6 +52,28 @@ tracer: Tracer | None = None
 rag_graph: RAGGraph | None = None
 vector_store: VectorStore | None = None
 hybrid_retriever: HybridRetriever | None = None
+
+EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001f600-\U0001f64f"
+    "\U0001f300-\U0001f5ff"
+    "\U0001f680-\U0001f6ff"
+    "\U0001f1e0-\U0001f1ff"
+    "\U00002702-\U000027b0"
+    "\U000024c2-\U0001f251"
+    "\U0001f900-\U0001f9ff"
+    "\U0001fa00-\U0001fa6f"
+    "\U0001fa70-\U0001faff"
+    "\U00002600-\U000026ff"
+    "\U0000fe0f"
+    "\U0000200d"
+    "]+",
+    flags=re.UNICODE,
+)
+
+
+def _strip_emoji(text: str) -> str:
+    return EMOJI_PATTERN.sub("", text).strip()
 
 
 @asynccontextmanager
@@ -105,16 +133,70 @@ class ChatResponse(BaseModel):
     model: str = ""
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    success: bool
+    token: str = ""
+    username: str = ""
+    error: str = ""
+
+
+def _get_current_user(authorization: str | None = Header(None)) -> str | None:
+    if not authorization:
+        return None
+    token = authorization.replace("Bearer ", "")
+    result = verify_token(token)
+    if result.success:
+        return result.username
+    return None
+
+
+@app.post("/auth/login", response_model=LoginResponse)
+async def login(request: LoginRequest) -> LoginResponse:
+    result = authenticate(request.username, request.password)
+    return LoginResponse(
+        success=result.success,
+        token=result.token,
+        username=result.username,
+        error=result.error,
+    )
+
+
+@app.get("/auth/verify")
+async def verify(authorization: str | None = Header(None)) -> dict[str, Any]:
+    user = _get_current_user(authorization)
+    if user:
+        return {"valid": True, "username": user}
+    return {"valid": False}
+
+
 @app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest) -> ChatResponse:
+async def chat(
+    request: ChatRequest,
+    authorization: str | None = Header(None),
+) -> ChatResponse:
     assert safety_guard and rag_graph and memory_manager
+
+    import time
+    start = time.monotonic()
+
+    user = _get_current_user(authorization)
+    if not user:
+        REQUEST_COUNT.labels(endpoint="/chat", status="unauthorized").inc()
+        return ChatResponse(answer="Unauthorized. Please login first.")
 
     safety_check = safety_guard.check_input(request.message)
     if not safety_check.safe:
+        REQUEST_COUNT.labels(endpoint="/chat", status="rejected").inc()
         return ChatResponse(answer=f"Input rejected: {safety_check.reason}")
 
     result = await rag_graph.run(request.message)
-    answer = result.get("answer", "")
+    answer = _strip_emoji(result.get("answer", ""))
+    intent = result.get("intent", "knowledge_qa")
 
     output_check = safety_guard.check_output(answer)
     if not output_check.safe:
@@ -122,6 +204,12 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
     memory_manager.add_message("user", request.message)
     memory_manager.add_message("assistant", answer)
+
+    elapsed = time.monotonic() - start
+    REQUEST_COUNT.labels(endpoint="/chat", status="success").inc()
+    REQUEST_LATENCY.labels(endpoint="/chat").observe(elapsed)
+    CHAT_COUNT.labels(intent=str(intent)).inc()
+    ACTIVE_SESSIONS.inc()
 
     return ChatResponse(
         answer=answer,
@@ -160,16 +248,64 @@ async def ingest_knowledge(request: IngestRequest) -> IngestResponse:
 
     docs = load_directory(request.path)
     chunks = split_documents(docs)
+
+    sources = set()
+    for doc in docs:
+        src = doc.metadata.get("source", "")
+        if src:
+            sources.add(src)
+
+    for source in sources:
+        vector_store.delete_by_source(source)
+
     vector_store.add_documents(chunks)
     hybrid_retriever.index(chunks)
-    logger.info("knowledge_ingested", path=request.path, docs=len(docs), chunks=len(chunks))
+    logger.info(
+        "knowledge_ingested",
+        path=request.path,
+        docs=len(docs),
+        chunks=len(chunks),
+        sources_updated=len(sources),
+    )
     return IngestResponse(documents_loaded=len(docs), chunks_created=len(chunks))
 
 
-@app.get("/knowledge/stats")
-async def knowledge_stats() -> dict[str, Any]:
+@app.post("/knowledge/rebuild", response_model=IngestResponse)
+async def rebuild_knowledge(request: IngestRequest) -> IngestResponse:
+    assert vector_store and hybrid_retriever
+    from .rag.splitter import split_documents
+
+    vector_store.clear()
+    logger.info("knowledge_cleared")
+
+    docs = load_directory(request.path)
+    chunks = split_documents(docs)
+    vector_store.add_documents(chunks)
+    hybrid_retriever.index(chunks)
+    logger.info("knowledge_rebuilt", docs=len(docs), chunks=len(chunks))
+    return IngestResponse(documents_loaded=len(docs), chunks_created=len(chunks))
+
+
+@app.get("/knowledge/sources")
+async def knowledge_sources() -> dict[str, Any]:
     assert vector_store
-    return vector_store.get_collection_stats()
+    sources = vector_store.get_all_sources()
+    return {"sources": sources, "count": len(sources)}
+
+
+@app.get("/prometheus")
+async def prometheus_metrics() -> Any:
+    from fastapi.responses import Response
+    from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
+    if vector_store:
+        stats = vector_store.get_collection_stats()
+        KNOWLEDGE_DOCS.set(stats.get("count", 0))
+
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST,
+    )
 
 
 def main() -> None:
