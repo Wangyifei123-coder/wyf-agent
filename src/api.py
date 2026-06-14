@@ -20,8 +20,11 @@ from .gateway.client import LLMClient, LLMConfig
 from .memory.manager import MemoryManager
 from .observability.logger import setup_logging
 from .observability.tracer import Tracer
+from .rag.bm25_retriever import BM25Retriever
 from .rag.embeddings import EmbeddingService
 from .rag.graph import RAGGraph
+from .rag.hybrid_retriever import HybridRetriever
+from .rag.kg_retriever import KnowledgeGraphRetriever
 from .rag.loader import load_directory
 from .rag.retriever import Retriever
 from .rag.vectorstore import VectorStore
@@ -42,11 +45,13 @@ safety_guard: SafetyGuard | None = None
 tracer: Tracer | None = None
 rag_graph: RAGGraph | None = None
 vector_store: VectorStore | None = None
+hybrid_retriever: HybridRetriever | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    global llm_client, react_engine, memory_manager, safety_guard, tracer, rag_graph, vector_store
+    global llm_client, react_engine, memory_manager, safety_guard
+    global tracer, rag_graph, vector_store, hybrid_retriever
 
     setup_logging(level=os.getenv("LOG_LEVEL", "INFO"), format="json")
 
@@ -64,8 +69,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     embedding_service = EmbeddingService()
     vector_store = VectorStore(embedding_service=embedding_service)
-    retriever = Retriever(vector_store)
-    rag_graph = RAGGraph(llm_client, retriever)
+    vector_retriever = Retriever(vector_store)
+
+    bm25_retriever = BM25Retriever()
+
+    kg_retriever = KnowledgeGraphRetriever()
+
+    hybrid_retriever = HybridRetriever(
+        vector_retriever=vector_retriever,
+        bm25_retriever=bm25_retriever,
+        kg_retriever=kg_retriever,
+    )
+
+    rag_graph = RAGGraph(llm_client, hybrid_retriever)
 
     react_engine = ReActEngine(llm_client, tool_registry, memory_manager)
 
@@ -139,12 +155,13 @@ class IngestResponse(BaseModel):
 
 @app.post("/knowledge/ingest", response_model=IngestResponse)
 async def ingest_knowledge(request: IngestRequest) -> IngestResponse:
-    assert vector_store
+    assert vector_store and hybrid_retriever
     from .rag.splitter import split_documents
 
     docs = load_directory(request.path)
     chunks = split_documents(docs)
     vector_store.add_documents(chunks)
+    hybrid_retriever.index(chunks)
     logger.info("knowledge_ingested", path=request.path, docs=len(docs), chunks=len(chunks))
     return IngestResponse(documents_loaded=len(docs), chunks_created=len(chunks))
 

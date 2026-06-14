@@ -9,6 +9,7 @@ import structlog
 from langgraph.graph import END, StateGraph
 
 from src.gateway.client import LLMClient
+from src.rag.hybrid_retriever import HybridRetriever
 from src.rag.loader import Document
 from src.rag.retriever import Retriever
 
@@ -108,7 +109,7 @@ GENERATE_PROMPT = """你是一个专业的问答助手。根据以下检索到�
 
 
 class RAGGraph:
-    def __init__(self, llm: LLMClient, retriever: Retriever) -> None:
+    def __init__(self, llm: LLMClient, retriever: Retriever | HybridRetriever) -> None:
         self.llm = llm
         self.retriever = retriever
         self._graph = self._build_graph()
