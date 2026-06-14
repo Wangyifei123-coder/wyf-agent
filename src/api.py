@@ -293,6 +293,12 @@ async def knowledge_sources() -> dict[str, Any]:
     return {"sources": sources, "count": len(sources)}
 
 
+@app.get("/knowledge/stats")
+async def knowledge_stats() -> dict[str, Any]:
+    assert vector_store
+    return vector_store.get_collection_stats()
+
+
 @app.get("/prometheus")
 async def prometheus_metrics() -> Any:
     from fastapi.responses import Response
