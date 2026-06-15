@@ -182,6 +182,6 @@ taskkill /PID <pid> /F
   - 图片上传 ✅
   - 系统托盘 ✅
   - 全局快捷键 ✅
-  - 构建打包 ⏳
-- 多 Agent 角色和通信协议（Step 7）
+  - 构建打包 ⏳（需要 electron-builder 配置）
+- 多 Agent 角色和通信协议（Step 7）⏳（计划已创建）
 - 完善测试体系（A/B 测试、基准对比）（Step 9）
