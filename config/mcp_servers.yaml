@@ -10,8 +10,8 @@ servers:
     enabled: true
 
   # 文件系统服务器
-  # - name: "filesystem"
-  #   transport: "stdio"
-  #   command: "npx"
-  #   args: ["-y", "@modelcontextprotocol/server-filesystem", "D:\\PythonProject\\my-agent\\wyf-agent"]
-  #   enabled: false
+  - name: "filesystem"
+    transport: "stdio"
+    command: "cmd"
+    args: ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem", "D:\\PythonProject\\my-agent\\wyf-agent"]
+    enabled: true
