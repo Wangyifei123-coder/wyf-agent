@@ -270,46 +270,39 @@ class RAGGraph:
             logger.info("tool_matched_by_rules", tool=tool_name, confidence=confidence)
             return direct_match
 
-        tool_prompt = f"""你是一个工具调用决策器。判断用户问题是否需要调用工具。
-
-可用工具:
-{self._format_tools_for_prompt(tools)}
-
-【重要规则】
-1. 任何数学计算、算术表达式、数字运算都必须使用工具，禁止自行计算
-2. 天气查询必须使用工具
-3. 文本统计必须使用工具
-4. 工具调用优先级高于自行回答
-
-【判断示例】
-- "计算 123 * 456" → 必须调用计算器工具
-- "100 + 200 等于多少" → 必须调用计算器工具
-- "北京天气" → 必须调用天气工具
-- "统计这段话的字数" → 必须调用文本统计工具
-- "你好" → 不需要工具
-- "什么是Python" → 不需要工具
-
-用户问题: {query}
-
-返回 JSON:
-如果需要调用工具:
-{{"need_tool": true, "tool_name": "工具名", "arguments": {{"参数名": "参数值"}}}}
-如果不需要: {{"need_tool": false}}
-
-只返回 JSON，不要解释:"""
-
         try:
-            response = await self.llm.chat([{"role": "user", "content": tool_prompt}])
-            import json
-            result = json.loads(response.content.strip())
-            confidence = result.get("confidence", 0.8)
-            if result.get("need_tool") and confidence >= TOOL_CALL_CONFIDENCE_THRESHOLD:
-                tool_name = result.get("tool_name")
-                logger.info("tool_matched_by_llm", tool=tool_name, confidence=confidence)
+            system_prompt = """你是一个工具调用助手。根据用户的问题，选择合适的工具来执行。
+
+当用户需要：
+- 计算数学表达式 → 使用 calculator 工具
+- 查询天气 → 使用 get_weather 工具
+- 统计文本 → 使用 text_count 工具
+- 读写文件 → 使用 filesystem 工具
+- 查询数据库 → 使用 database 工具
+- 搜索网页 → 使用 web_search 工具
+- 调用 API → 使用 http_get/http_post 工具
+- GitHub 操作（搜索仓库、创建 Issue、查看代码等）→ 使用 github 工具
+
+请直接调用工具，不要自行计算或查询。"""
+
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": query},
+            ]
+
+            response = await self.llm.chat(messages, tools=tools)
+
+            if response.tool_calls:
+                tool_call = response.tool_calls[0]
+                import json
+                args = tool_call.arguments
+                if isinstance(args, str):
+                    args = json.loads(args)
+                logger.info("tool_matched_by_function_calling", tool=tool_call.function_name)
                 return {
-                    "name": result.get("tool_name", ""),
-                    "arguments": result.get("arguments", {}),
-                    "confidence": confidence,
+                    "name": tool_call.function_name,
+                    "arguments": args,
+                    "confidence": 0.95,
                 }
         except Exception as e:
             logger.warning("tool_check_failed", error=str(e))
