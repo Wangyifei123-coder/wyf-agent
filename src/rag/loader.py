@@ -49,10 +49,52 @@ def load_text(path: str) -> Document:
 
 def load_pdf(path: str) -> Document:
     reader = PdfReader(path)
-    pages = [page.extract_text() or "" for page in reader.pages]
-    text = "\n".join(pages)
-    logger.info("loaded_pdf", path=path, pages=len(pages), chars=len(text))
-    return Document(content=text, metadata={"file_type": "pdf", "source": path})
+    pages_text = []
+    pages_to_ocr = []
+
+    for i, page in enumerate(reader.pages):
+        text = page.extract_text() or ""
+        if len(text.strip()) < 50:
+            pages_to_ocr.append(i)
+        else:
+            pages_text.append(text)
+
+    if pages_to_ocr:
+        logger.info("pdf_ocr_needed", path=path, pages=pages_to_ocr)
+        ocr_text = _ocr_pdf_pages(path, pages_to_ocr)
+        for i, text in zip(pages_to_ocr, ocr_text):
+            pages_text.insert(i, text)
+
+    text = "\n".join(pages_text)
+    is_scanned = len(pages_to_ocr) > len(reader.pages) / 2
+    file_type = "pdf_scanned" if is_scanned else "pdf"
+
+    logger.info(
+        "loaded_pdf",
+        path=path,
+        pages=len(reader.pages),
+        ocr_pages=len(pages_to_ocr),
+        chars=len(text),
+    )
+    return Document(content=text, metadata={"file_type": file_type, "source": path})
+
+
+def _ocr_pdf_pages(pdf_path: str, page_indices: list[int]) -> list[str]:
+    """OCR specific pages from PDF using Tesseract"""
+    try:
+        import pytesseract
+        from pdf2image import convert_from_path
+
+        images = convert_from_path(pdf_path, first_page=min(page_indices) + 1,
+                                   last_page=max(page_indices) + 1)
+        results = []
+        for img in images:
+            text = pytesseract.image_to_string(img, lang="chi_sim+eng")
+            results.append(text.strip())
+        return results
+    except Exception as e:
+        logger.warning("ocr_failed", error=str(e))
+        return [""] * len(page_indices)
 
 
 def load_docx(path: str) -> Document:

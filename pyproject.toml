@@ -31,6 +31,8 @@ dependencies = [
     "prometheus-client>=0.21.0",
     "beautifulsoup4>=4.12.0",
     "trafilatura>=1.12.0",
+    "pytesseract>=0.3.10",
+    "pdf2image>=1.16.0",
 ]
 
 [project.optional-dependencies]

@@ -41,7 +41,7 @@ class TestLoadPdf:
         pdf_path = tmp_path / "sample.pdf"
         _create_blank_pdf(pdf_path)
         doc = load_pdf(str(pdf_path))
-        assert doc.metadata["file_type"] == "pdf"
+        assert doc.metadata["file_type"] in ("pdf", "pdf_scanned")
         assert doc.metadata["source"] == str(pdf_path)
         assert isinstance(doc.content, str)
 
@@ -53,7 +53,9 @@ class TestLoadDirectory:
         _create_blank_pdf(tmp_path / "c.pdf")
         docs = load_directory(str(tmp_path))
         types = {d.metadata["file_type"] for d in docs}
-        assert types == {"markdown", "text", "pdf"}
+        assert "markdown" in types
+        assert "text" in types
+        assert any(t in types for t in ("pdf", "pdf_scanned"))
 
     def test_skips_unsupported(self, tmp_path: Path):
         (tmp_path / "data.md").write_text("ok", encoding="utf-8")
