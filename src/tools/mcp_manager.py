@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator
 
 import structlog
 import yaml
@@ -24,67 +25,73 @@ class MCPServerConfig:
         self.url = kwargs.get("url")
 
 
+class MCPServerConnection:
+    def __init__(self, config: MCPServerConfig) -> None:
+        self.config = config
+        self.session: ClientSession | None = None
+        self._context: Any = None
+
+    async def connect(self) -> None:
+        if self.config.transport == "stdio":
+            server_params = StdioServerParameters(
+                command=self.config.command,
+                args=self.config.args,
+                env=self.config.env or None,
+            )
+            self._context = stdio_client(server_params)
+            read, write = await self._context.__aenter__()
+            self.session = ClientSession(read, write)
+            await self.session.__aenter__()
+            await self.session.initialize()
+        elif self.config.transport == "http":
+            self._context = streamable_http_client(self.config.url)
+            read, write, _ = await self._context.__aenter__()
+            self.session = ClientSession(read, write)
+            await self.session.__aenter__()
+            await self.session.initialize()
+
+    async def disconnect(self) -> None:
+        if self.session:
+            try:
+                await self.session.__aexit__(None, None, None)
+            except Exception:
+                pass
+        if self._context:
+            try:
+                await self._context.__aexit__(None, None, None)
+            except Exception:
+                pass
+
+
 class MCPManager:
     def __init__(self) -> None:
-        self._sessions: dict[str, ClientSession] = {}
+        self._connections: dict[str, MCPServerConnection] = {}
         self._tools: dict[str, dict[str, Any]] = {}
-        self._configs: dict[str, MCPServerConfig] = {}
 
     async def connect_server(self, config: MCPServerConfig) -> None:
         try:
-            if config.transport == "stdio":
-                await self._connect_stdio(config)
-            elif config.transport == "http":
-                await self._connect_http(config)
-            else:
-                logger.warning("unsupported_transport", transport=config.transport)
-                return
-
-            self._configs[config.name] = config
+            conn = MCPServerConnection(config)
+            await conn.connect()
+            self._connections[config.name] = conn
             await self._discover_tools(config.name)
             logger.info("mcp_server_connected", server=config.name)
         except Exception as e:
             logger.error("mcp_connect_failed", server=config.name, error=str(e))
 
-    async def _connect_stdio(self, config: MCPServerConfig) -> None:
-        server_params = StdioServerParameters(
-            command=config.command,
-            args=config.args,
-            env=config.env or None,
-        )
-        read, write = await asyncio.wait_for(
-            stdio_client(server_params).__aenter__(),
-            timeout=30,
-        )
-        session = ClientSession(read, write)
-        await session.__aenter__()
-        await session.initialize()
-        self._sessions[config.name] = session
-
-    async def _connect_http(self, config: MCPServerConfig) -> None:
-        read, write, _ = await asyncio.wait_for(
-            streamable_http_client(config.url).__aenter__(),
-            timeout=30,
-        )
-        session = ClientSession(read, write)
-        await session.__aenter__()
-        await session.initialize()
-        self._sessions[config.name] = session
-
     async def _discover_tools(self, server_name: str) -> None:
-        session = self._sessions.get(server_name)
-        if not session:
+        conn = self._connections.get(server_name)
+        if not conn or not conn.session:
             return
 
         try:
-            result = await session.list_tools()
+            result = await conn.session.list_tools()
             for tool in result.tools:
                 tool_key = f"{server_name}:{tool.name}"
                 self._tools[tool_key] = {
                     "name": tool.name,
                     "server": server_name,
                     "description": tool.description or "",
-                    "input_schema": tool.inputSchema if hasattr(tool, 'inputSchema') else {},
+                    "input_schema": tool.inputSchema if hasattr(tool, "inputSchema") else {},
                 }
             logger.info(
                 "mcp_tools_discovered",
@@ -97,27 +104,13 @@ class MCPManager:
     async def call_tool(
         self, server_name: str, tool_name: str, arguments: dict[str, Any]
     ) -> Any:
-        session = self._sessions.get(server_name)
-        if not session:
+        conn = self._connections.get(server_name)
+        if not conn or not conn.session:
             raise ValueError(f"MCP server '{server_name}' not connected")
 
-        try:
-            result = await session.call_tool(tool_name, arguments)
-            logger.info(
-                "mcp_tool_called",
-                server=server_name,
-                tool=tool_name,
-                success=not result.isError if hasattr(result, 'isError') else True,
-            )
-            return result
-        except Exception as e:
-            logger.error(
-                "mcp_tool_call_failed",
-                server=server_name,
-                tool=tool_name,
-                error=str(e),
-            )
-            raise
+        result = await conn.session.call_tool(tool_name, arguments)
+        logger.info("mcp_tool_called", server=server_name, tool=tool_name)
+        return result
 
     def get_all_tools(self) -> list[dict[str, Any]]:
         return list(self._tools.values())
@@ -136,13 +129,13 @@ class MCPManager:
         return tools
 
     async def disconnect_all(self) -> None:
-        for name, session in self._sessions.items():
+        for name, conn in self._connections.items():
             try:
-                await session.__aexit__(None, None, None)
+                await conn.disconnect()
                 logger.info("mcp_server_disconnected", server=name)
             except Exception as e:
                 logger.warning("mcp_disconnect_failed", server=name, error=str(e))
-        self._sessions.clear()
+        self._connections.clear()
         self._tools.clear()
 
     @staticmethod
@@ -152,12 +145,13 @@ class MCPManager:
 
         configs = []
         for server in data.get("servers", []):
-            configs.append(MCPServerConfig(
-                name=server["name"],
-                transport=server["transport"],
-                command=server.get("command"),
-                args=server.get("args", []),
-                env=server.get("env", {}),
-                url=server.get("url"),
-            ))
+            if server.get("enabled", True):
+                configs.append(MCPServerConfig(
+                    name=server["name"],
+                    transport=server["transport"],
+                    command=server.get("command"),
+                    args=server.get("args", []),
+                    env=server.get("env", {}),
+                    url=server.get("url"),
+                ))
         return configs
