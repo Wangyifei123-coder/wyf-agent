@@ -527,72 +527,64 @@ if prompt := st.chat_input("输入你的问题或网页URL..."):
 
         with st.chat_message("assistant"):
             import json as _json
-            import threading
             import time
 
             placeholder = st.empty()
-            timer_placeholder = st.empty()
             full_answer = ""
             intent = "knowledge_qa"
             sources: list[str] = []
 
             start_time = time.time()
-            timer_running = threading.Event()
-            timer_running.set()
 
-            def update_timer():
-                while timer_running.is_set():
-                    elapsed = time.time() - start_time
-                    timer_placeholder.markdown(
-                        f'<div class="timer-display">'
-                        f'<span class="loading-spinner"></span>'
-                        f'思考中... {elapsed:.1f}s</div>',
-                        unsafe_allow_html=True,
-                    )
-                    time.sleep(0.1)
+            with st.status("思考中...", expanded=True) as status:
+                timer_ph = st.empty()
 
-            timer_thread = threading.Thread(target=update_timer, daemon=True)
-            timer_thread.start()
+                def show_timer():
+                    while True:
+                        elapsed = time.time() - start_time
+                        timer_ph.markdown(f"⏱️ {elapsed:.1f}s")
+                        time.sleep(0.1)
 
-            try:
-                with httpx.Client(timeout=180) as client:
-                    headers = {"Authorization": f"Bearer {st.session_state.token}"}
-                    with client.stream(
-                        "POST",
-                        f"{API_BASE}/chat/stream",
-                        json={
-                            "message": prompt,
-                            "images": image_b64_list or None,
-                        },
-                        headers=headers,
-                    ) as response:
-                        for line in response.iter_lines():
-                            if not line.startswith("data: "):
-                                continue
-                            data = _json.loads(line[6:])
-                            msg_type = data.get("type", "")
-                            if msg_type == "intent":
-                                intent = data.get("intent", intent)
-                            elif msg_type == "chunk":
-                                chunk = data.get("chunk", "")
-                                full_answer += chunk
-                                placeholder.markdown(full_answer)
-                            elif msg_type == "done":
-                                intent = data.get("intent", intent)
-                                sources = data.get("sources", [])
-                                break
-            except Exception as e:
-                st.error(f"请求失败: {e}")
-            finally:
-                timer_running.clear()
-                time.sleep(0.15)
+                import threading
+                timer_t = threading.Thread(target=show_timer, daemon=True)
+                timer_t.start()
 
-            elapsed = time.time() - start_time
-            timer_placeholder.markdown(
-                f'<div class="timer-display">'
-                f'回答完成 {elapsed:.1f}s</div>',
-                unsafe_allow_html=True,
-            )
+                try:
+                    with httpx.Client(timeout=180) as client:
+                        headers = {
+                            "Authorization": f"Bearer {st.session_state.token}"
+                        }
+                        with client.stream(
+                            "POST",
+                            f"{API_BASE}/chat/stream",
+                            json={
+                                "message": prompt,
+                                "images": image_b64_list or None,
+                            },
+                            headers=headers,
+                        ) as response:
+                            for line in response.iter_lines():
+                                if not line.startswith("data: "):
+                                    continue
+                                data = _json.loads(line[6:])
+                                msg_type = data.get("type", "")
+                                if msg_type == "intent":
+                                    intent = data.get("intent", intent)
+                                elif msg_type == "chunk":
+                                    chunk = data.get("chunk", "")
+                                    full_answer += chunk
+                                    placeholder.markdown(full_answer)
+                                elif msg_type == "done":
+                                    intent = data.get("intent", intent)
+                                    sources = data.get("sources", [])
+                                    break
+                except Exception as e:
+                    st.error(f"请求失败: {e}")
+
+                elapsed = time.time() - start_time
+                status.update(
+                    label=f"回答完成 ({elapsed:.1f}s)", state="complete"
+                )
 
             if full_answer:
                 placeholder.markdown(full_answer)
