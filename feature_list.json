@@ -15,6 +15,51 @@
     "notes": ""
   },
   {
+    "id": "rag-knowledge",
+    "priority": 1.5,
+    "area": "chat",
+    "title": "RAG 知识问答",
+    "user_visible_behavior": "用户上传文档后，Agent 能基于文档内容回答问题",
+    "status": "passing",
+    "verification": [
+      "文档入库成功",
+      "基于文档内容回答问题",
+      "引用来源正确标注"
+    ],
+    "evidence": "2026-06-15: 57/57 测试通过，Agentic RAG 全流程验证，三路混合检索（向量+BM25+Neo4j）",
+    "notes": "LangGraph 状态机实现意图路由、查询改写、检索评估循环"
+  },
+  {
+    "id": "multimodal",
+    "priority": 1.6,
+    "area": "chat",
+    "title": "多模态图片支持",
+    "user_visible_behavior": "用户可以上传图片，Agent 能识别图片内容并回答问题",
+    "status": "passing",
+    "verification": [
+      "图片上传成功",
+      "LLM 识别图片文字",
+      "LLM 描述图片内容"
+    ],
+    "evidence": "2026-06-15: 模型升级 mimo-v2.5，前端图片上传/预览，图片入库 LLM 描述",
+    "notes": "支持 png/jpg/jpeg/gif/webp 格式"
+  },
+  {
+    "id": "web-ingest",
+    "priority": 1.7,
+    "area": "chat",
+    "title": "网页入库功能",
+    "user_visible_behavior": "用户输入 URL，Agent 自动提取网页文字和图片入库",
+    "status": "passing",
+    "verification": [
+      "URL 输入自动检测",
+      "文字内容提取",
+      "图片提取和描述"
+    ],
+    "evidence": "2026-06-15: trafilatura 提取正文，BeautifulSoup 提取图片，聊天框直接粘贴 URL",
+    "notes": "知乎等反爬虫网站暂不支持"
+  },
+  {
     "id": "tool-calling",
     "priority": 2,
     "area": "tools",
@@ -28,7 +73,7 @@
       "工具调用有审计日志"
     ],
     "evidence": "",
-    "notes": ""
+    "notes": "下一阶段任务：实现 MCP 协议支持"
   },
   {
     "id": "memory-persistence",
