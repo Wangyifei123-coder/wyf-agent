@@ -208,89 +208,135 @@ for msg in st.session_state.messages:
             source_html = "".join(f'<span class="source-tag">{s}</span>' for s in sources)
             st.markdown(f"**引用来源:** {source_html}", unsafe_allow_html=True)
 
-if prompt := st.chat_input("输入你的问题..."):
+if prompt := st.chat_input("输入你的问题或网页URL..."):
+    import re
+
+    url_pattern = re.compile(r'https?://\S+')
+    urls = url_pattern.findall(prompt)
+
     image_b64_list = []
     for img in st.session_state.pending_images:
         image_b64_list.append(base64.b64encode(img.getvalue()).decode())
 
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": prompt,
-            "images": image_b64_list,
-        }
-    )
+    if urls and not image_b64_list:
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-    with st.chat_message("user"):
-        if image_b64_list:
-            cols = st.columns(min(len(image_b64_list), 4))
-            for i, img_b64 in enumerate(image_b64_list):
-                with cols[i % 4]:
-                    st.image(base64.b64decode(img_b64), width=200)
-        st.markdown(prompt)
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-    with st.chat_message("assistant"):
-        import json as _json
+        with st.chat_message("assistant"):
+            placeholder = st.empty()
+            results = []
 
-        placeholder = st.empty()
-        full_answer = ""
-        intent = "knowledge_qa"
-        sources: list[str] = []
+            for url in urls:
+                placeholder.markdown(f"正在入库网页: {url} ...")
+                try:
+                    result = call_api(
+                        "/knowledge/ingest-url", "POST",
+                        {"url": url}, timeout=180,
+                        token=st.session_state.token,
+                    )
+                    results.append(result)
+                    placeholder.markdown(
+                        f"网页入库完成: **{result.get('title', '')}**\n"
+                        f"- 文字分块: {result.get('text_chunks', 0)}\n"
+                        f"- 图片提取: {result.get('images_extracted', 0)}"
+                    )
+                except Exception as e:
+                    placeholder.markdown(f"网页入库失败: {e}")
 
-        try:
-            with httpx.Client(timeout=180) as client:
-                headers = {"Authorization": f"Bearer {st.session_state.token}"}
-                with client.stream(
-                    "POST",
-                    f"{API_BASE}/chat/stream",
-                    json={
-                        "message": prompt,
-                        "images": image_b64_list or None,
-                    },
-                    headers=headers,
-                ) as response:
-                    for line in response.iter_lines():
-                        if not line.startswith("data: "):
-                            continue
-                        data = _json.loads(line[6:])
-                        msg_type = data.get("type", "")
-                        if msg_type == "intent":
-                            intent = data.get("intent", intent)
-                        elif msg_type == "chunk":
-                            chunk = data.get("chunk", "")
-                            full_answer += chunk
-                            placeholder.markdown(full_answer)
-                        elif msg_type == "done":
-                            intent = data.get("intent", intent)
-                            sources = data.get("sources", [])
-                            break
-        except Exception as e:
-            st.error(f"请求失败: {e}")
-
-        if full_answer:
+            full_answer = "网页入库完成！你现在可以问我关于这些网页内容的问题了。"
             placeholder.markdown(full_answer)
+            intent = "doc_analysis"
+            sources = urls
 
-            intent_class = f"intent-{intent}"
-            intent_label = {
-                "chitchat": "闲聊",
-                "knowledge_qa": "知识问答",
-                "doc_analysis": "文档分析",
-            }.get(intent, intent)
-            st.markdown(
-                f'<span class="intent-tag {intent_class}">{intent_label}</span>',
-                unsafe_allow_html=True,
-            )
-
-            if sources:
-                source_html = "".join(f'<span class="source-tag">{s}</span>' for s in sources)
-                st.markdown(f"**引用来源:** {source_html}", unsafe_allow_html=True)
-
-    st.session_state.messages.append(
-        {
+        st.session_state.messages.append({
             "role": "assistant",
             "content": full_answer,
             "intent": intent,
             "sources": sources,
-        }
-    )
-    st.session_state.pending_images = []
+        })
+        st.session_state.pending_images = []
+        st.rerun()
+    else:
+        st.session_state.messages.append(
+            {
+                "role": "user",
+                "content": prompt,
+                "images": image_b64_list,
+            }
+        )
+
+        with st.chat_message("user"):
+            if image_b64_list:
+                cols = st.columns(min(len(image_b64_list), 4))
+                for i, img_b64 in enumerate(image_b64_list):
+                    with cols[i % 4]:
+                        st.image(base64.b64decode(img_b64), width=200)
+            st.markdown(prompt)
+
+        with st.chat_message("assistant"):
+            import json as _json
+
+            placeholder = st.empty()
+            full_answer = ""
+            intent = "knowledge_qa"
+            sources: list[str] = []
+
+            try:
+                with httpx.Client(timeout=180) as client:
+                    headers = {"Authorization": f"Bearer {st.session_state.token}"}
+                    with client.stream(
+                        "POST",
+                        f"{API_BASE}/chat/stream",
+                        json={
+                            "message": prompt,
+                            "images": image_b64_list or None,
+                        },
+                        headers=headers,
+                    ) as response:
+                        for line in response.iter_lines():
+                            if not line.startswith("data: "):
+                                continue
+                            data = _json.loads(line[6:])
+                            msg_type = data.get("type", "")
+                            if msg_type == "intent":
+                                intent = data.get("intent", intent)
+                            elif msg_type == "chunk":
+                                chunk = data.get("chunk", "")
+                                full_answer += chunk
+                                placeholder.markdown(full_answer)
+                            elif msg_type == "done":
+                                intent = data.get("intent", intent)
+                                sources = data.get("sources", [])
+                                break
+            except Exception as e:
+                st.error(f"请求失败: {e}")
+
+            if full_answer:
+                placeholder.markdown(full_answer)
+
+                intent_class = f"intent-{intent}"
+                intent_label = {
+                    "chitchat": "闲聊",
+                    "knowledge_qa": "知识问答",
+                    "doc_analysis": "文档分析",
+                }.get(intent, intent)
+                st.markdown(
+                    f'<span class="intent-tag {intent_class}">{intent_label}</span>',
+                    unsafe_allow_html=True,
+                )
+
+                if sources:
+                    source_html = "".join(f'<span class="source-tag">{s}</span>' for s in sources)
+                    st.markdown(f"**引用来源:** {source_html}", unsafe_allow_html=True)
+
+        st.session_state.messages.append(
+            {
+                "role": "assistant",
+                "content": full_answer,
+                "intent": intent,
+                "sources": sources,
+            }
+        )
+        st.session_state.pending_images = []
