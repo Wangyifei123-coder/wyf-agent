@@ -527,6 +527,7 @@ if prompt := st.chat_input("输入你的问题或网页URL..."):
 
         with st.chat_message("assistant"):
             import json as _json
+            import threading
             import time
 
             placeholder = st.empty()
@@ -536,17 +537,22 @@ if prompt := st.chat_input("输入你的问题或网页URL..."):
             sources: list[str] = []
 
             start_time = time.time()
+            timer_running = threading.Event()
+            timer_running.set()
 
             def update_timer():
-                elapsed = time.time() - start_time
-                timer_placeholder.markdown(
-                    f'<div class="timer-display">'
-                    f'<span class="loading-spinner"></span>'
-                    f'思考中... {elapsed:.1f}s</div>',
-                    unsafe_allow_html=True,
-                )
+                while timer_running.is_set():
+                    elapsed = time.time() - start_time
+                    timer_placeholder.markdown(
+                        f'<div class="timer-display">'
+                        f'<span class="loading-spinner"></span>'
+                        f'思考中... {elapsed:.1f}s</div>',
+                        unsafe_allow_html=True,
+                    )
+                    time.sleep(0.1)
 
-            update_timer()
+            timer_thread = threading.Thread(target=update_timer, daemon=True)
+            timer_thread.start()
 
             try:
                 with httpx.Client(timeout=180) as client:
@@ -570,7 +576,6 @@ if prompt := st.chat_input("输入你的问题或网页URL..."):
                             elif msg_type == "chunk":
                                 chunk = data.get("chunk", "")
                                 full_answer += chunk
-                                update_timer()
                                 placeholder.markdown(full_answer)
                             elif msg_type == "done":
                                 intent = data.get("intent", intent)
@@ -578,6 +583,9 @@ if prompt := st.chat_input("输入你的问题或网页URL..."):
                                 break
             except Exception as e:
                 st.error(f"请求失败: {e}")
+            finally:
+                timer_running.clear()
+                time.sleep(0.15)
 
             elapsed = time.time() - start_time
             timer_placeholder.markdown(
