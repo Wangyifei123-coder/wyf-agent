@@ -1,8 +1,10 @@
-"""工具注册中心 — schema 定义、权限标注、调用分发、输入校验、超时控制、熔断"""
+"""工具注册中心 — schema 定义、权限标注、调用分发、输入校验、超时控制、熔断、缓存"""
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -14,6 +16,8 @@ logger = structlog.get_logger(__name__)
 
 CIRCUIT_BREAKER_THRESHOLD = 5
 CIRCUIT_BREAKER_RESET_TIME = 60
+CACHE_DEFAULT_MAX_SIZE = 100
+CACHE_DEFAULT_TTL = 300
 
 
 @dataclass
@@ -30,9 +34,77 @@ class ToolSchema:
     name: str
     description: str
     parameters: list[ToolParameter]
+    version: str = "1.0.0"
     permissions: list[str] = field(default_factory=list)
+    allowed_roles: list[str] = field(default_factory=lambda: ["admin", "user"])
     timeout: int = 30
     max_result_length: int = 10000
+    cacheable: bool = False
+    max_retries: int = 0
+    retry_delay: float = 1.0
+
+
+def _parse_version(version: str) -> tuple[int, ...]:
+    """将 'major.minor.patch' 解析为可比较的元组。"""
+    try:
+        return tuple(int(p) for p in version.split("."))
+    except (ValueError, AttributeError):
+        return (0, 0, 0)
+
+
+class ToolCache:
+    def __init__(
+        self,
+        max_size: int = CACHE_DEFAULT_MAX_SIZE,
+        ttl: int = CACHE_DEFAULT_TTL,
+    ) -> None:
+        self._cache: dict[str, tuple[str, float]] = {}
+        self._max_size = max_size
+        self._ttl = ttl
+        self._hits: int = 0
+        self._misses: int = 0
+        self._lock = asyncio.Lock()
+
+    def _make_key(self, tool: str, args: dict[str, Any]) -> str:
+        data = f"{tool}:{json.dumps(args, sort_keys=True)}"
+        return hashlib.md5(data.encode()).hexdigest()
+
+    async def get(self, tool: str, args: dict[str, Any]) -> str | None:
+        async with self._lock:
+            key = self._make_key(tool, args)
+            if key in self._cache:
+                result, timestamp = self._cache[key]
+                if time.time() - timestamp < self._ttl:
+                    self._hits += 1
+                    logger.debug("cache_hit", tool=tool, hits=self._hits)
+                    return result
+                del self._cache[key]
+            self._misses += 1
+            return None
+
+    async def set(self, tool: str, args: dict[str, Any], result: str) -> None:
+        async with self._lock:
+            key = self._make_key(tool, args)
+            if len(self._cache) >= self._max_size:
+                oldest_key = min(self._cache, key=lambda k: self._cache[k][1])
+                del self._cache[oldest_key]
+            self._cache[key] = (result, time.time())
+
+    def get_stats(self) -> dict[str, Any]:
+        total = self._hits + self._misses
+        return {
+            "size": len(self._cache),
+            "max_size": self._max_size,
+            "ttl": self._ttl,
+            "hits": self._hits,
+            "misses": self._misses,
+            "hit_rate": self._hits / total if total > 0 else 0.0,
+        }
+
+    def clear(self) -> None:
+        self._cache.clear()
+        self._hits = 0
+        self._misses = 0
 
 
 class Tool(ABC):
@@ -119,29 +191,99 @@ def validate_arguments(arguments: dict[str, Any], schema: ToolSchema) -> dict[st
 class ToolRegistry:
     def __init__(self) -> None:
         self._tools: dict[str, Tool] = {}
+        self._latest_versions: dict[str, str] = {}
         self._audit_log: list[dict[str, Any]] = []
         self._circuit_breakers: dict[str, CircuitBreaker] = {}
+        self._cache = ToolCache()
+
+    @staticmethod
+    def _make_key(name: str, version: str) -> str:
+        return f"{name}:{version}"
 
     def register(self, tool: Tool) -> None:
         name = tool.schema.name
-        self._tools[name] = tool
-        self._circuit_breakers[name] = CircuitBreaker()
-        logger.info("tool_registered", tool=name, permissions=tool.schema.permissions)
+        version = tool.schema.version
+        key = self._make_key(name, version)
+        self._tools[key] = tool
+        self._circuit_breakers[key] = CircuitBreaker()
+
+        current_latest = self._latest_versions.get(name)
+        if current_latest is None or _parse_version(version) > _parse_version(current_latest):
+            self._latest_versions[name] = version
+
+        logger.info(
+            "tool_registered", tool=name, version=version,
+            permissions=tool.schema.permissions,
+        )
 
     def register_mcp_tools(self, mcp_tools: list[Tool]) -> None:
         for tool in mcp_tools:
             self.register(tool)
         logger.info("mcp_tools_registered", count=len(mcp_tools))
 
-    def get(self, name: str) -> Tool | None:
-        return self._tools.get(name)
+    def get(self, name: str, version: str | None = None) -> Tool | None:
+        if version:
+            return self._tools.get(self._make_key(name, version))
+        latest = self._latest_versions.get(name)
+        if latest is None:
+            return None
+        return self._tools.get(self._make_key(name, latest))
 
     def list_tools(self) -> list[ToolSchema]:
-        return [t.schema for t in self._tools.values()]
+        seen: set[str] = set()
+        schemas: list[ToolSchema] = []
+        for name, version in self._latest_versions.items():
+            tool = self._tools.get(self._make_key(name, version))
+            if tool and name not in seen:
+                seen.add(name)
+                schemas.append(tool.schema)
+        return schemas
+
+    def check_permission(self, tool_name: str, user_role: str) -> bool:
+        tool = self.get(tool_name)
+        if not tool:
+            return False
+
+        if not tool.schema.allowed_roles:
+            return True
+
+        has_permission = user_role in tool.schema.allowed_roles
+        logger.info(
+            "permission_check",
+            tool=tool_name,
+            role=user_role,
+            allowed=has_permission,
+            allowed_roles=tool.schema.allowed_roles,
+        )
+        return has_permission
+
+    def list_tools_for_role(self, user_role: str) -> list[ToolSchema]:
+        return [
+            t.schema for t in self._tools.values()
+            if self.check_permission(t.schema.name, user_role)
+        ]
+
+    def list_versions(self, name: str) -> list[str]:
+        prefix = f"{name}:"
+        versions = [
+            key[len(prefix):]
+            for key in self._tools
+            if key.startswith(prefix)
+        ]
+        versions.sort(key=_parse_version, reverse=True)
+        return versions
 
     def to_openai_functions(self) -> list[dict[str, Any]]:
         functions = []
-        for tool in self._tools.values():
+        seen: set[str] = set()
+        for name, version in self._latest_versions.items():
+            if name in seen:
+                continue
+            seen.add(name)
+            tool = self._tools.get(self._make_key(name, version))
+            if not tool:
+                continue
+
             params: dict[str, Any] = {}
             required = []
             for p in tool.schema.parameters:
@@ -165,64 +307,149 @@ class ToolRegistry:
             })
         return functions
 
-    async def call(self, name: str, arguments: dict[str, Any]) -> str:
-        tool = self._tools.get(name)
+    async def call(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        version: str | None = None,
+        user_role: str = "user",
+    ) -> str:
+        tool = self.get(name, version)
         if not tool:
-            return f"Error: tool '{name}' not found"
+            ver_msg = f":{version}" if version else ""
+            return f"Error: tool '{name}{ver_msg}' not found"
 
-        cb = self._circuit_breakers.get(name)
+        if not self.check_permission(name, user_role):
+            logger.warning("permission_denied", tool=name, role=user_role)
+            return f"Error: permission denied for tool '{name}'"
+        if not tool:
+            ver_msg = f":{version}" if version else ""
+            return f"Error: tool '{name}{ver_msg}' not found"
+
+        resolved_version = tool.schema.version
+        key = self._make_key(name, resolved_version)
+
+        cb = self._circuit_breakers.get(key)
         if cb and not cb.is_available():
-            logger.warning("circuit_breaker_rejected", tool=name)
-            return f"Error: tool '{name}' is temporarily unavailable (circuit breaker open)"
+            logger.warning(
+                "circuit_breaker_rejected", tool=name, version=resolved_version,
+            )
+            return (
+                f"Error: tool '{name}:{resolved_version}'"
+                " is temporarily unavailable (circuit breaker open)"
+            )
 
         try:
             validated_args = validate_arguments(arguments, tool.schema)
         except ValueError as e:
-            logger.warning("validation_failed", tool=name, error=str(e))
+            logger.warning(
+                "validation_failed", tool=name,
+                version=resolved_version, error=str(e),
+            )
             return f"Validation error: {e}"
 
-        start = time.monotonic()
-        try:
-            result = await asyncio.wait_for(
-                tool.execute(**validated_args),
-                timeout=tool.schema.timeout,
-            )
-            if len(result) > tool.schema.max_result_length:
-                result = result[: tool.schema.max_result_length] + "\n... [truncated]"
+        if tool.schema.cacheable:
+            cached = await self._cache.get(name, validated_args)
+            if cached is not None:
+                self._audit(
+                    name, resolved_version, validated_args, cached,
+                    0, success=True, cache_hit=True,
+                )
+                return cached
 
-            if cb:
-                cb.record_success()
-            self._audit(name, validated_args, result, time.monotonic() - start, success=True)
-            return result
+        max_retries = tool.schema.max_retries
+        retry_delay = tool.schema.retry_delay
+        last_error: str | None = None
 
-        except TimeoutError:
-            if cb:
-                cb.record_failure()
-            self._audit(name, validated_args, "Timeout", time.monotonic() - start, success=False)
-            logger.error("tool_timeout", tool=name, timeout=tool.schema.timeout)
-            return f"Error: tool '{name}' timed out after {tool.schema.timeout}s"
+        for attempt in range(max_retries + 1):
+            if attempt > 0:
+                delay = retry_delay * (2 ** (attempt - 1))
+                logger.info(
+                    "tool_retry",
+                    tool=name,
+                    version=resolved_version,
+                    attempt=attempt,
+                    max_retries=max_retries,
+                    delay=delay,
+                    error=last_error,
+                )
+                await asyncio.sleep(delay)
 
-        except Exception as e:
-            if cb:
-                cb.record_failure()
-            self._audit(name, validated_args, str(e), time.monotonic() - start, success=False)
-            logger.error("tool_execution_failed", tool=name, error=str(e))
-            return f"Error executing {name}: {e}"
+            start = time.monotonic()
+            try:
+                result = await asyncio.wait_for(
+                    tool.execute(**validated_args),
+                    timeout=tool.schema.timeout,
+                )
+                if len(result) > tool.schema.max_result_length:
+                    result = result[: tool.schema.max_result_length] + "\n... [truncated]"
+
+                if tool.schema.cacheable:
+                    await self._cache.set(name, validated_args, result)
+
+                if cb:
+                    cb.record_success()
+                self._audit(
+                    name, resolved_version, validated_args, result,
+                    time.monotonic() - start, success=True, attempt=attempt,
+                )
+                return result
+
+            except TimeoutError:
+                last_error = f"Timeout after {tool.schema.timeout}s"
+                logger.warning(
+                    "tool_timeout", tool=name,
+                    version=resolved_version, attempt=attempt + 1,
+                )
+                self._audit(
+                    name, resolved_version, validated_args, "Timeout",
+                    time.monotonic() - start, success=False, attempt=attempt,
+                )
+
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(
+                    "tool_failed", tool=name,
+                    version=resolved_version,
+                    attempt=attempt + 1, error=str(e),
+                )
+                self._audit(
+                    name, resolved_version, validated_args, str(e),
+                    time.monotonic() - start, success=False, attempt=attempt,
+                )
+
+        if cb:
+            cb.record_failure()
+        logger.error(
+            "tool_exhausted_retries", tool=name,
+            version=resolved_version,
+            attempts=max_retries + 1, error=last_error,
+        )
+        return (
+            f"Error: tool '{name}:{resolved_version}'"
+            f" failed after {max_retries + 1} attempt(s): {last_error}"
+        )
 
     def _audit(
         self,
         tool: str,
+        version: str,
         args: dict[str, Any],
         result: str,
         duration: float,
         success: bool,
+        attempt: int = 0,
+        cache_hit: bool = False,
     ) -> None:
         entry = {
             "tool": tool,
+            "version": version,
             "args": args,
             "result_length": len(result),
             "duration_ms": round(duration * 1000, 2),
             "success": success,
+            "attempt": attempt,
+            "cache_hit": cache_hit,
             "timestamp": time.time(),
         }
         self._audit_log.append(entry)
@@ -233,9 +460,15 @@ class ToolRegistry:
 
     def get_circuit_breaker_status(self) -> dict[str, dict[str, Any]]:
         status = {}
-        for name, cb in self._circuit_breakers.items():
-            status[name] = {
+        for key, cb in self._circuit_breakers.items():
+            status[key] = {
                 "state": cb.state,
                 "failure_count": cb.failure_count,
             }
         return status
+
+    def get_cache_stats(self) -> dict[str, Any]:
+        return self._cache.get_stats()
+
+    def clear_cache(self) -> None:
+        self._cache.clear()

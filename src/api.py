@@ -35,7 +35,7 @@ from .rag.loader import load_directory
 from .rag.retriever import Retriever
 from .rag.vectorstore import VectorStore
 from .reasoning.react import ReActEngine
-from .safety.auth import authenticate, verify_token
+from .safety.auth import authenticate, get_user_role, verify_token
 from .safety.guard import SafetyGuard
 from .tools.mcp_manager import MCPManager, MCPServerConfig
 from .tools.mcp_registry import MCPRegistryClient
@@ -57,6 +57,7 @@ vector_store: VectorStore | None = None
 hybrid_retriever: HybridRetriever | None = None
 mcp_manager: MCPManager | None = None
 mcp_registry: MCPRegistryClient | None = None
+tool_registry: ToolRegistry | None = None
 
 EMOJI_PATTERN = re.compile(
     "["
@@ -82,7 +83,8 @@ def _strip_emoji(text: str) -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     global llm_client, react_engine, memory_manager, safety_guard
-    global tracer, rag_graph, vector_store, hybrid_retriever, mcp_manager, mcp_registry
+    global tracer, rag_graph, vector_store, hybrid_retriever
+    global mcp_manager, mcp_registry, tool_registry
 
     setup_logging(level=os.getenv("LOG_LEVEL", "INFO"), format="json")
 
@@ -181,6 +183,13 @@ def _get_current_user(authorization: str | None = Header(None)) -> str | None:
     if result.success:
         return result.username
     return None
+
+
+def _get_current_user_role(authorization: str | None = Header(None)) -> str:
+    if not authorization:
+        return "user"
+    token = authorization.replace("Bearer ", "")
+    return get_user_role(token)
 
 
 @app.post("/auth/login", response_model=LoginResponse)
@@ -287,6 +296,19 @@ async def chat_stream(
                 sources = event.get("sources", [])
                 data = json.dumps(
                     {'type': 'intent', 'intent': intent},
+                    ensure_ascii=False,
+                )
+                yield f"data: {data}\n\n"
+
+            elif event_type == "progress":
+                data = json.dumps(
+                    {
+                        'type': 'progress',
+                        'progress': event.get('progress', 0),
+                        'message': event.get('message', ''),
+                        'tool_name': event.get('tool_name', ''),
+                        'stage': event.get('stage', 'pending'),
+                    },
                     ensure_ascii=False,
                 )
                 yield f"data: {data}\n\n"
@@ -518,6 +540,7 @@ async def mcp_jsonrpc(
             error={"code": -32600, "message": "Unauthorized"},
         )
 
+    user_role = _get_current_user_role(authorization)
     method = request.method
     params = request.params or {}
 
@@ -535,6 +558,14 @@ async def mcp_jsonrpc(
                 return JsonRpcResponse(
                     id=request.id,
                     error={"code": -32602, "message": "Missing server or tool name"},
+                )
+
+            mcp_tool_name = f"{server}:{tool_name}"
+            if not tool_registry.check_permission(mcp_tool_name, user_role):
+                logger.warning("mcp_permission_denied", tool=mcp_tool_name, role=user_role)
+                return JsonRpcResponse(
+                    id=request.id,
+                    error={"code": -32604, "message": f"Permission denied for tool '{tool_name}'"},
                 )
 
             result = await mcp_manager.call_tool(server, tool_name, arguments)
@@ -559,11 +590,20 @@ async def mcp_jsonrpc(
 
 
 @app.get("/mcp/tools")
-async def mcp_tools() -> dict[str, Any]:
+async def mcp_tools(authorization: str | None = Header(None)) -> dict[str, Any]:
     if not mcp_manager:
         return {"tools": [], "count": 0}
-    tools = mcp_manager.get_all_tools()
-    return {"tools": tools, "count": len(tools)}
+
+    user_role = _get_current_user_role(authorization)
+    all_tools = mcp_manager.get_all_tools()
+
+    filtered_tools = []
+    for tool in all_tools:
+        tool_key = f"{tool['server']}:{tool['name']}"
+        if tool_registry.check_permission(tool_key, user_role):
+            filtered_tools.append(tool)
+
+    return {"tools": filtered_tools, "count": len(filtered_tools)}
 
 
 @app.get("/mcp/servers")
@@ -572,6 +612,44 @@ async def mcp_servers() -> dict[str, Any]:
         return {"servers": [], "count": 0}
     servers = mcp_manager.get_connected_servers()
     return {"servers": servers, "count": len(servers)}
+
+
+@app.get("/tools/permissions")
+async def check_tool_permissions(
+    tool_name: str,
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    user = _get_current_user(authorization)
+    if not user:
+        return {"error": "Unauthorized"}
+
+    user_role = _get_current_user_role(authorization)
+    has_permission = tool_registry.check_permission(tool_name, user_role)
+
+    return {
+        "tool": tool_name,
+        "user": user,
+        "role": user_role,
+        "allowed": has_permission,
+    }
+
+
+@app.get("/tools/list")
+async def list_tools_for_user(
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    user = _get_current_user(authorization)
+    if not user:
+        return {"error": "Unauthorized"}
+
+    user_role = _get_current_user_role(authorization)
+    tools = tool_registry.list_tools_for_role(user_role)
+
+    return {
+        "tools": [{"name": t.name, "description": t.description} for t in tools],
+        "count": len(tools),
+        "role": user_role,
+    }
 
 
 @app.get("/mcp/search")

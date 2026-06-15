@@ -9,30 +9,39 @@ servers:
     args: ["mcp_servers/test_server.py"]
     enabled: true
 
-  # 数据库服务器 - SQLite 只读查询
+  # 文件系统服务器
+  - name: "filesystem"
+    transport: "stdio"
+    command: "cmd"
+    args: ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem", "D:\\PythonProject\\my-agent\\wyf-agent"]
+    enabled: true
+
+  # 数据库服务器
   - name: "database"
     transport: "stdio"
     command: "python"
     args: ["mcp_servers/db_server.py"]
     enabled: true
 
-  # 网页搜索服务器
+  # 搜索服务器
   - name: "search"
     transport: "stdio"
     command: "python"
     args: ["mcp_servers/search_server.py"]
     enabled: true
 
-  # HTTP API 服务器
+  # API 服务器
   - name: "api"
     transport: "stdio"
     command: "python"
     args: ["mcp_servers/api_server.py"]
     enabled: true
 
-  # 文件系统服务器
-  - name: "filesystem"
+  # GitHub 服务器
+  - name: "github"
     transport: "stdio"
     command: "cmd"
-    args: ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem", "D:\\PythonProject\\my-agent\\wyf-agent"]
+    args: ["/c", "npx", "-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: ""
     enabled: true
