@@ -394,6 +394,74 @@ async def knowledge_stats() -> dict[str, Any]:
     return vector_store.get_collection_stats()
 
 
+class IngestURLRequest(BaseModel):
+    url: str
+
+
+class IngestURLResponse(BaseModel):
+    title: str
+    text_chunks: int
+    images_extracted: int
+    status: str
+
+
+@app.post("/knowledge/ingest-url", response_model=IngestURLResponse)
+async def ingest_url(request: IngestURLRequest) -> IngestURLResponse:
+    assert vector_store and hybrid_retriever and llm_client
+    import tempfile
+
+    from .rag.image_describer import describe_image
+    from .rag.loader import Document
+    from .rag.splitter import split_documents
+    from .rag.web_loader import download_image, load_webpage
+
+    web = await load_webpage(request.url)
+
+    docs: list[Document] = []
+
+    if web.text.strip():
+        docs.append(Document(
+            content=web.text,
+            metadata={"source": web.url, "title": web.title, "file_type": "webpage"},
+        ))
+
+    images_count = 0
+    if web.image_urls:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for img_url in web.image_urls[:20]:
+                local_path = await download_image(img_url, tmpdir)
+                if local_path:
+                    description = await describe_image(llm_client, local_path)
+                    docs.append(Document(
+                        content=description,
+                        metadata={
+                            "source": web.url,
+                            "title": web.title,
+                            "file_type": "image_description",
+                        },
+                    ))
+                    images_count += 1
+
+    chunks = split_documents(docs)
+    vector_store.add_documents(chunks)
+    hybrid_retriever.index(chunks)
+
+    logger.info(
+        "url_ingested",
+        url=request.url,
+        title=web.title,
+        text_chunks=len([d for d in docs if d.metadata.get("file_type") == "webpage"]),
+        images=images_count,
+    )
+
+    return IngestURLResponse(
+        title=web.title,
+        text_chunks=len([d for d in docs if d.metadata.get("file_type") == "webpage"]),
+        images_extracted=images_count,
+        status="success",
+    )
+
+
 @app.get("/prometheus")
 async def prometheus_metrics() -> Any:
     from fastapi.responses import Response
