@@ -22,3 +22,4 @@ node_modules/
 Thumbs.db
 .idea/
 data/chroma/
+config/mcp_servers.yaml

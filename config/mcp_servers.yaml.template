@@ -1,0 +1,47 @@
+# MCP 服务器配置模板
+# 复制此文件为 mcp_servers.yaml 并填入你的配置
+
+servers:
+  # 测试工具服务器
+  - name: "test-tools"
+    transport: "stdio"
+    command: "python"
+    args: ["mcp_servers/test_server.py"]
+    enabled: true
+
+  # 文件系统服务器
+  - name: "filesystem"
+    transport: "stdio"
+    command: "cmd"
+    args: ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem", "."]
+    enabled: true
+
+  # 数据库服务器
+  - name: "database"
+    transport: "stdio"
+    command: "python"
+    args: ["mcp_servers/db_server.py"]
+    enabled: true
+
+  # 搜索服务器
+  - name: "search"
+    transport: "stdio"
+    command: "python"
+    args: ["mcp_servers/search_server.py"]
+    enabled: true
+
+  # API 服务器
+  - name: "api"
+    transport: "stdio"
+    command: "python"
+    args: ["mcp_servers/api_server.py"]
+    enabled: true
+
+  # GitHub 服务器
+  - name: "github"
+    transport: "stdio"
+    command: "cmd"
+    args: ["/c", "npx", "-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "your_github_token_here"
+    enabled: true
