@@ -133,7 +133,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         kg_retriever=kg_retriever,
     )
 
-    rag_graph = RAGGraph(llm_client, hybrid_retriever)
+    rag_graph = RAGGraph(llm_client, hybrid_retriever, tool_registry)
 
     react_engine = ReActEngine(llm_client, tool_registry, memory_manager)
 

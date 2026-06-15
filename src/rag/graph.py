@@ -30,6 +30,7 @@ class Intent(enum.Enum):
     CHITCHAT = "chitchat"
     DOC_ANALYSIS = "doc_analysis"
     KNOWLEDGE_QA = "knowledge_qa"
+    TOOL_CALL = "tool_call"
 
 
 class RAGState(TypedDict, total=False):
@@ -45,6 +46,8 @@ class RAGState(TypedDict, total=False):
     answer: str
     sources: list[str]
     iteration: int
+    tool_call: dict[str, Any] | None
+    tool_result: str | None
 
 
 ROUTE_PROMPT = """你是一个意图分类器。根据用户的问题，将其分类为以下三类之一：
@@ -121,9 +124,15 @@ GENERATE_PROMPT = """你是一个专业的问答助手。根据以下检索到�
 
 
 class RAGGraph:
-    def __init__(self, llm: LLMClient, retriever: Retriever | HybridRetriever) -> None:
+    def __init__(
+        self,
+        llm: LLMClient,
+        retriever: Retriever | HybridRetriever,
+        tool_registry: Any = None,
+    ) -> None:
         self.llm = llm
         self.retriever = retriever
+        self.tool_registry = tool_registry
         self._graph = self._build_graph()
 
     def _build_graph(self) -> StateGraph[RAGState]:
@@ -139,6 +148,8 @@ class RAGGraph:
         graph.add_node("generate_direct", self._generate_direct)
         graph.add_node("generate_with_context", self._generate_with_context)
         graph.add_node("rag_loop", self._rag_loop)
+        graph.add_node("execute_tool", self._execute_tool)
+        graph.add_node("generate_with_tool", self._generate_with_tool)
 
         graph.set_entry_point("route_intent")
 
@@ -149,6 +160,7 @@ class RAGGraph:
                 "chitchat": "generate_direct",
                 "doc_analysis": "generate_with_context",
                 "knowledge_qa": "rag_loop",
+                "tool_call": "execute_tool",
             },
         )
 
@@ -168,9 +180,11 @@ class RAGGraph:
 
         graph.add_edge("refine_query", "retrieve")
         graph.add_edge("decompose", "retrieve")
+        graph.add_edge("execute_tool", "generate_with_tool")
         graph.add_edge("generate", END)
         graph.add_edge("generate_direct", END)
         graph.add_edge("generate_with_context", END)
+        graph.add_edge("generate_with_tool", END)
 
         return graph
 
@@ -218,8 +232,65 @@ class RAGGraph:
         else:
             intent = Intent.KNOWLEDGE_QA
 
+            tool_call = await self._check_tool_call(query)
+            if tool_call:
+                logger.info("intent_routed", intent="tool_call", tool=tool_call.get("name"))
+                return {"intent": Intent.TOOL_CALL, "tool_call": tool_call}
+
         logger.info("intent_routed", intent=intent.value, latency_ms=round(elapsed, 2))
         return {"intent": intent}
+
+    async def _check_tool_call(self, query: str) -> dict[str, Any] | None:
+        if not self.tool_registry:
+            return None
+
+        tools = self.tool_registry.to_openai_functions()
+        if not tools:
+            return None
+
+        tool_prompt = f"""你是一个工具调用助手。根据用户的问题，判断是否需要调用工具。
+
+可用工具:
+{self._format_tools_for_prompt(tools)}
+
+用户问题: {query}
+
+如果需要调用工具，返回 JSON 格式：
+{{"need_tool": true, "tool_name": "工具名", "arguments": {{"参数名": "参数值"}}}}
+
+如果不需要调用工具，返回：
+{{"need_tool": false}}
+
+只返回 JSON，不要解释："""
+
+        try:
+            response = await self.llm.chat([{"role": "user", "content": tool_prompt}])
+            import json
+            result = json.loads(response.content.strip())
+            if result.get("need_tool"):
+                return {
+                    "name": result.get("tool_name", ""),
+                    "arguments": result.get("arguments", {}),
+                }
+        except Exception as e:
+            logger.warning("tool_check_failed", error=str(e))
+
+        return None
+
+    def _format_tools_for_prompt(self, tools: list[dict[str, Any]]) -> str:
+        lines = []
+        for tool in tools:
+            func = tool.get("function", {})
+            name = func.get("name", "")
+            desc = func.get("description", "")
+            params = func.get("parameters", {})
+            lines.append(f"- {name}: {desc}")
+            if params.get("properties"):
+                for pname, pinfo in params["properties"].items():
+                    ptype = pinfo.get('type', 'string')
+                    pdesc = pinfo.get('description', '')
+                    lines.append(f"  - {pname}: {ptype} - {pdesc}")
+        return "\n".join(lines)
 
     async def _rewrite_query(self, state: RAGState) -> dict[str, Any]:
         query = state.get("rewritten_query") or state["query"]
@@ -555,3 +626,48 @@ class RAGGraph:
         async for chunk in self.llm.stream_chat(messages):
             yield {"type": "chunk", "content": chunk}
         yield {"type": "done"}
+
+    async def _execute_tool(self, state: RAGState) -> dict[str, Any]:
+        tool_call = state.get("tool_call")
+        if not tool_call:
+            return {"tool_result": "Error: No tool call information"}
+
+        tool_name = tool_call.get("name", "")
+        arguments = tool_call.get("arguments", {})
+
+        try:
+            if self.tool_registry:
+                result = await self.tool_registry.call(tool_name, arguments)
+            else:
+                result = "Error: Tool registry not available"
+
+            logger.info("tool_executed", tool=tool_name, success=True)
+            return {"tool_result": result}
+        except Exception as e:
+            logger.error("tool_execution_failed", tool=tool_name, error=str(e))
+            return {"tool_result": f"Error executing tool: {e}"}
+
+    async def _generate_with_tool(self, state: RAGState) -> dict[str, Any]:
+        query = state["query"]
+        tool_call = state.get("tool_call", {})
+        tool_result = state.get("tool_result", "")
+
+        tool_name = tool_call.get('name', 'unknown')
+        tool_args = tool_call.get('arguments', {})
+        context = (
+            f"工具调用结果:\n"
+            f"工具: {tool_name}\n"
+            f"参数: {tool_args}\n"
+            f"结果: {tool_result}"
+        )
+
+        prompt = GENERATE_PROMPT.format(context=context, query=query)
+        messages = [{"role": "user", "content": prompt}]
+
+        response = await self.llm.chat(messages)
+
+        logger.info("tool_answer_generated", tool=tool_call.get("name", "unknown"))
+        return {
+            "answer": response.content,
+            "sources": [f"tool:{tool_call.get('name', 'unknown')}"],
+        }
