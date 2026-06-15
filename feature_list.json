@@ -142,7 +142,7 @@
     "area": "orchestration",
     "title": "多 Agent 协作",
     "user_visible_behavior": "复杂任务能拆分给多个角色协作完成",
-    "status": "not_started",
+    "status": "abandoned",
     "verification": [
       "Planner 生成计划",
       "Generator 执行实现",
@@ -150,6 +150,6 @@
       "协作流程可追踪"
     ],
     "evidence": "",
-    "notes": ""
+    "notes": "暂不实现"
   }
 ]
