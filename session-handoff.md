@@ -58,6 +58,13 @@
   - 熔断机制（CircuitBreaker）✅
   - 结果截断（max_result_length）✅
   - 审计日志（入参/出参/耗时）✅
+  - 并行工具调用（asyncio.gather）✅
+  - 工具结果缓存（LRU + TTL）✅
+  - 工具调用链（多步骤执行）✅
+  - 流式工具进度（SSE）✅
+  - 工具版本管理（major.minor.patch）✅
+  - 工具权限控制（角色权限）✅
+  - 工具调用重试（指数退避）✅
 
 ## 本轮改动
 
