@@ -51,17 +51,24 @@ def test_initial_state():
 async def test_chitchat_bypasses_rag(mock_llm, mock_retriever):
     mock_llm.chat = AsyncMock(
         return_value=LLMResponse(
-            content="chitchat",
+            content="你好！有什么可以帮你的吗？",
             model="test-model",
             usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
         )
     )
-    mock_llm.chat.return_value = LLMResponse(
-        content="你好！有什么可以帮你的吗？",
-        model="test-model",
-        usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
-    )
 
+    graph = RAGGraph(llm=mock_llm, retriever=mock_retriever)
+
+    result = await graph.run("你好呀")
+
+    assert result.get("intent") == Intent.CHITCHAT
+    assert result.get("answer") == "你好！有什么可以帮你的吗？"
+    assert result.get("sources") == []
+    mock_retriever.retrieve.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_chitchat_llm_routing(mock_llm, mock_retriever):
     call_count = 0
 
     async def mock_chat_side_effect(*args, **kwargs):
@@ -74,7 +81,7 @@ async def test_chitchat_bypasses_rag(mock_llm, mock_retriever):
                 usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
             )
         return LLMResponse(
-            content="你好！有什么可以帮你的吗？",
+            content="当然可以！",
             model="test-model",
             usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
         )
@@ -83,9 +90,9 @@ async def test_chitchat_bypasses_rag(mock_llm, mock_retriever):
 
     graph = RAGGraph(llm=mock_llm, retriever=mock_retriever)
 
-    result = await graph.run("你好呀")
+    result = await graph.run("今天天气怎么样，适合出去玩吗？")
 
     assert result.get("intent") == Intent.CHITCHAT
-    assert result.get("answer") == "你好！有什么可以帮你的吗？"
+    assert result.get("answer") == "当然可以！"
     assert result.get("sources") == []
     mock_retriever.retrieve.assert_not_called()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import enum
+import time
 from typing import Any, TypedDict
 
 import structlog
@@ -18,6 +19,11 @@ logger = structlog.get_logger(__name__)
 MAX_ITERATIONS = 3
 RETRIEVE_TOP_K = 20
 RERANK_TOP_K = 10
+
+CHITCHAT_KEYWORDS = frozenset([
+    "你好", "hi", "hello", "嗨", "谢谢", "感谢", "bye", "再见",
+    "你是谁", "介绍", "早上好", "晚安", "ok", "好的",
+])
 
 
 class Intent(enum.Enum):
@@ -194,8 +200,15 @@ class RAGGraph:
             logger.info("intent_routed", intent="doc_analysis", reason="uploaded_doc")
             return {"intent": Intent.DOC_ANALYSIS}
 
+        normalized = query.strip().lower()
+        if len(normalized) < 20 and any(kw in normalized for kw in CHITCHAT_KEYWORDS):
+            logger.info("intent_routed", intent="chitchat", reason="keyword_fast_path")
+            return {"intent": Intent.CHITCHAT}
+
+        start = time.monotonic()
         prompt = ROUTE_PROMPT.format(query=query)
         response = await self.llm.chat([{"role": "user", "content": prompt}])
+        elapsed = (time.monotonic() - start) * 1000
 
         raw = response.content.strip().lower()
         if "chitchat" in raw:
@@ -205,7 +218,7 @@ class RAGGraph:
         else:
             intent = Intent.KNOWLEDGE_QA
 
-        logger.info("intent_routed", intent=intent.value)
+        logger.info("intent_routed", intent=intent.value, latency_ms=round(elapsed, 2))
         return {"intent": intent}
 
     async def _rewrite_query(self, state: RAGState) -> dict[str, Any]:
@@ -218,20 +231,29 @@ class RAGGraph:
             lines = [f"{m['role']}: {m['content']}" for m in recent]
             conversation_context = "对话历史:\n" + "\n".join(lines)
 
+        start = time.monotonic()
         prompt = REWRITE_PROMPT.format(
             conversation_context=conversation_context,
             query=query,
         )
         response = await self.llm.chat([{"role": "user", "content": prompt}])
+        elapsed = (time.monotonic() - start) * 1000
         rewritten = response.content.strip()
 
-        logger.info("query_rewritten", original=query[:50], rewritten=rewritten[:50])
+        latency = round(elapsed, 2)
+        logger.info(
+            "query_rewritten",
+            original=query[:50],
+            rewritten=rewritten[:50],
+            latency_ms=latency,
+        )
         return {"rewritten_query": rewritten}
 
     async def _retrieve(self, state: RAGState) -> dict[str, Any]:
         query = state.get("rewritten_query") or state["query"]
         sub_queries = state.get("sub_queries", [])
 
+        start = time.monotonic()
         all_docs: list[Document] = []
         if sub_queries:
             for sq in sub_queries:
@@ -249,12 +271,14 @@ class RAGGraph:
                 unique_docs.append(doc)
 
         reranked = unique_docs[:RERANK_TOP_K]
+        elapsed = (time.monotonic() - start) * 1000
 
         logger.info(
             "docs_retrieved",
             total=len(all_docs),
             unique=len(unique_docs),
             reranked=len(reranked),
+            latency_ms=round(elapsed, 2),
         )
         return {"retrieved_docs": reranked}
 
@@ -266,12 +290,14 @@ class RAGGraph:
         if not docs:
             return {"evaluation": "needs_decompose", "iteration": iteration}
 
+        start = time.monotonic()
         docs_text = "\n\n".join(
             f"[来源{i+1}] {doc.content[:500]}" for i, doc in enumerate(docs)
         )
 
         prompt = EVALUATE_PROMPT.format(query=query, docs=docs_text)
         response = await self.llm.chat([{"role": "user", "content": prompt}])
+        elapsed = (time.monotonic() - start) * 1000
 
         raw = response.content.strip().lower()
         if "sufficient" in raw:
@@ -281,7 +307,13 @@ class RAGGraph:
         else:
             evaluation = "needs_refinement"
 
-        logger.info("evaluation_result", evaluation=evaluation, iteration=iteration)
+        latency = round(elapsed, 2)
+        logger.info(
+            "evaluation_result",
+            evaluation=evaluation,
+            iteration=iteration,
+            latency_ms=latency,
+        )
         return {"evaluation": evaluation, "iteration": iteration}
 
     async def _refine_query(self, state: RAGState) -> dict[str, Any]:
@@ -345,7 +377,10 @@ class RAGGraph:
         if images:
             content: list[dict[str, Any]] = [{"type": "text", "text": query}]
             for img_b64 in images:
-                content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}})
+                content.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/png;base64,{img_b64}"},
+                })
             messages.append({"role": "user", "content": content})
         else:
             messages.append({"role": "user", "content": query})
@@ -363,7 +398,10 @@ class RAGGraph:
         if images:
             content: list[dict[str, Any]] = [{"type": "text", "text": query}]
             for img_b64 in images:
-                content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}})
+                content.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/png;base64,{img_b64}"},
+                })
             messages: list[dict[str, Any]] = [{"role": "user", "content": content}]
         else:
             context = f"用户上传的文档内容:\n{doc_content}"
@@ -385,6 +423,7 @@ class RAGGraph:
         uploaded_doc: str | None = None,
         images: list[str] | None = None,
     ) -> RAGState:
+        start = time.monotonic()
         initial_state: RAGState = {
             "query": query,
             "conversation_history": conversation_history or [],
@@ -395,11 +434,13 @@ class RAGGraph:
 
         compiled = self._graph.compile()
         final_state: RAGState = await compiled.ainvoke(initial_state)  # type: ignore[assignment]
+        elapsed = (time.monotonic() - start) * 1000
 
         logger.info(
             "rag_complete",
             intent=final_state.get("intent", "unknown"),
             iterations=final_state.get("iteration", 0),
+            total_latency_ms=round(elapsed, 2),
         )
         return final_state
 
@@ -410,6 +451,7 @@ class RAGGraph:
         uploaded_doc: str | None = None,
         images: list[str] | None = None,
     ) -> Any:
+        stream_start = time.monotonic()
 
         initial_state: RAGState = {
             "query": query,
@@ -435,10 +477,16 @@ class RAGGraph:
             if images:
                 content: list[dict[str, Any]] = [{"type": "text", "text": query}]
                 for img_b64 in images:
-                    content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}})
+                    content.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/png;base64,{img_b64}"},
+                })
                 messages.append({"role": "user", "content": content})
             else:
                 messages.append({"role": "user", "content": query})
+
+            prep_ms = (time.monotonic() - stream_start) * 1000
+            logger.info("stream_prep_done", intent="chitchat", prep_ms=round(prep_ms, 2))
 
             async def chitchat_stream() -> Any:
                 async for chunk in self.llm.stream_chat(messages):
@@ -457,10 +505,16 @@ class RAGGraph:
             if images:
                 msg_content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
                 for img_b64 in images:
-                    msg_content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}})
+                    msg_content.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{img_b64}"},
+                    })
                 messages = [{"role": "user", "content": msg_content}]
             else:
                 messages = [{"role": "user", "content": prompt}]
+
+            prep_ms = (time.monotonic() - stream_start) * 1000
+            logger.info("stream_prep_done", intent="doc_analysis", prep_ms=round(prep_ms, 2))
 
             yield {"type": "intent", "intent": intent_value, "sources": ["uploaded_document"]}
             async for chunk in self.llm.stream_chat(messages):
@@ -488,6 +542,14 @@ class RAGGraph:
         context = "\n\n".join(f"[来源{i+1}] {doc.content}" for i, doc in enumerate(docs))
         prompt = GENERATE_PROMPT.format(context=context, query=query)
         messages = [{"role": "user", "content": prompt}]
+
+        prep_ms = (time.monotonic() - stream_start) * 1000
+        logger.info(
+            "stream_prep_done",
+            intent=intent_value,
+            iterations=state.get("iteration", 0),
+            prep_ms=round(prep_ms, 2),
+        )
 
         yield {"type": "intent", "intent": intent_value, "sources": sources}
         async for chunk in self.llm.stream_chat(messages):

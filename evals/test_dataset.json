@@ -346,5 +346,569 @@
     "expected_output": "TensorFlow和PyTorch各有优势，TensorFlow适合生产部署，PyTorch适合研究",
     "expected_intent": "knowledge_qa",
     "retrieval_context_keywords": ["TensorFlow", "PyTorch"]
+  },
+  {
+    "id": "qa_simple_21",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python的装饰器是什么？",
+    "expected_output": "Python装饰器是一种设计模式，使用@语法糖，在不修改原函数代码的情况下扩展函数功能",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["装饰器", "@语法糖", "扩展功能"]
+  },
+  {
+    "id": "qa_simple_22",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python的生成器有什么用？",
+    "expected_output": "生成器使用yield关键字，可以惰性计算、节省内存，适合处理大数据流",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["生成器", "yield", "惰性计算", "节省内存"]
+  },
+  {
+    "id": "qa_simple_23",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python的GIL是什么？",
+    "expected_output": "GIL是全局解释器锁，限制Python同一时刻只能执行一个线程，影响多线程性能",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["GIL", "全局解释器锁", "多线程"]
+  },
+  {
+    "id": "qa_simple_24",
+    "scenario": "knowledge_qa_simple",
+    "input": "Python有哪些常用的数据结构？",
+    "expected_output": "Python常用数据结构包括：列表list、元组tuple、字典dict、集合set",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["列表", "元组", "字典", "集合"]
+  },
+  {
+    "id": "qa_simple_25",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是Python的虚拟环境？",
+    "expected_output": "虚拟环境是Python的独立运行环境，使用venv或conda创建，隔离项目依赖",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["虚拟环境", "venv", "conda", "隔离"]
+  },
+  {
+    "id": "qa_simple_26",
+    "scenario": "knowledge_qa_simple",
+    "input": "FastAPI和Flask有什么区别？",
+    "expected_output": "FastAPI支持异步、自动生成OpenAPI文档、性能更高；Flask更轻量、生态更成熟",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["FastAPI", "Flask", "异步", "OpenAPI"]
+  },
+  {
+    "id": "qa_simple_27",
+    "scenario": "knowledge_qa_simple",
+    "input": "FastAPI的依赖注入是什么？",
+    "expected_output": "FastAPI的依赖注入使用Depends()函数，可以复用共享逻辑，如数据库连接、认证",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["依赖注入", "Depends", "复用"]
+  },
+  {
+    "id": "qa_simple_28",
+    "scenario": "knowledge_qa_simple",
+    "input": "FastAPI如何实现中间件？",
+    "expected_output": "FastAPI使用@app.middleware装饰器定义中间件，可以处理请求前后的逻辑如日志、CORS",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["中间件", "@app.middleware", "CORS"]
+  },
+  {
+    "id": "qa_simple_29",
+    "scenario": "knowledge_qa_simple",
+    "input": "Docker的Dockerfile怎么写？",
+    "expected_output": "Dockerfile使用FROM、RUN、COPY、CMD等指令构建镜像，定义应用的运行环境",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Dockerfile", "FROM", "RUN", "COPY", "CMD"]
+  },
+  {
+    "id": "qa_simple_30",
+    "scenario": "knowledge_qa_simple",
+    "input": "Docker Compose是什么？",
+    "expected_output": "Docker Compose用于定义和运行多容器应用，使用YAML文件配置服务、网络、卷",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Docker Compose", "多容器", "YAML"]
+  },
+  {
+    "id": "qa_simple_31",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是Transformer模型？",
+    "expected_output": "Transformer是基于自注意力机制的深度学习模型，是GPT、BERT等大语言模型的基础架构",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Transformer", "自注意力", "GPT", "BERT"]
+  },
+  {
+    "id": "qa_simple_32",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是Embedding？",
+    "expected_output": "Embedding是将文本、图片等数据转换为向量表示的技术，用于语义相似度计算和检索",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Embedding", "向量", "语义相似度"]
+  },
+  {
+    "id": "qa_simple_33",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是Prompt Engineering？",
+    "expected_output": "Prompt Engineering是设计和优化提示词的技术，包括零样本、少样本、思维链等策略",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Prompt Engineering", "提示词", "零样本", "思维链"]
+  },
+  {
+    "id": "qa_simple_34",
+    "scenario": "knowledge_qa_simple",
+    "input": "RAG系统有哪些评估指标？",
+    "expected_output": "RAG评估指标包括：检索召回率、检索精确率、生成答案准确性、相关性、忠实度",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["检索召回率", "精确率", "准确性", "忠实度"]
+  },
+  {
+    "id": "qa_simple_35",
+    "scenario": "knowledge_qa_simple",
+    "input": "LangGraph的CheckPoint机制是什么？",
+    "expected_output": "CheckPoint是LangGraph的状态持久化机制，用于保存和恢复Agent执行状态，支持断点续传",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["CheckPoint", "持久化", "断点续传"]
+  },
+  {
+    "id": "qa_simple_36",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是向量检索？",
+    "expected_output": "向量检索是通过计算向量之间的相似度来查找最相关文档的技术，常用方法包括ANN近似最近邻",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["向量检索", "相似度", "ANN", "近似最近邻"]
+  },
+  {
+    "id": "qa_simple_37",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是文本分块？",
+    "expected_output": "文本分块是将长文档切分为小段的技术，常用方法包括固定大小、递归字符、语义分块",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["文本分块", "递归字符", "语义分块"]
+  },
+  {
+    "id": "qa_simple_38",
+    "scenario": "knowledge_qa_simple",
+    "input": "机器学习中的过拟合是什么？",
+    "expected_output": "过拟合是模型在训练集上表现好但泛化能力差，解决方法包括正则化、数据增强、Dropout",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["过拟合", "泛化", "正则化", "Dropout"]
+  },
+  {
+    "id": "qa_simple_39",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是迁移学习？",
+    "expected_output": "迁移学习是将在一个任务上学到的知识应用到另一个相关任务上，可以减少训练数据和时间",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["迁移学习", "知识迁移", "预训练"]
+  },
+  {
+    "id": "qa_simple_40",
+    "scenario": "knowledge_qa_simple",
+    "input": "什么是注意力机制？",
+    "expected_output": "注意力机制让模型关注输入中最相关的部分，通过Query、Key、Value计算注意力权重",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["注意力机制", "Query", "Key", "Value"]
+  },
+  {
+    "id": "qa_multi_11",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "如何用Docker部署FastAPI应用？",
+    "expected_output": "用Docker部署FastAPI：编写Dockerfile使用uvicorn运行，用docker-compose配置服务，暴露端口",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Docker", "FastAPI", "uvicorn", "docker-compose"]
+  },
+  {
+    "id": "qa_multi_12",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "RAG系统如何优化检索效果？",
+    "expected_output": "优化RAG检索效果：使用混合检索、查询改写、重排序rerank、优化文本分块策略",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["混合检索", "查询改写", "重排序", "分块"]
+  },
+  {
+    "id": "qa_multi_13",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "Python和Docker怎么配合使用？",
+    "expected_output": "Python和Docker配合：用Dockerfile构建Python镜像，用docker-compose管理服务，用pip安装依赖",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Python", "Docker", "Dockerfile", "pip"]
+  },
+  {
+    "id": "qa_multi_14",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "LangGraph如何实现多Agent协作？",
+    "expected_output": "LangGraph多Agent协作：定义多个Node作为Agent，通过Edge连接，使用状态传递消息",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["LangGraph", "多Agent", "Node", "Edge", "状态"]
+  },
+  {
+    "id": "qa_multi_15",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "深度学习在NLP中有哪些应用？",
+    "expected_output": "深度学习在NLP的应用：文本分类、命名实体识别、机器翻译、文本生成、情感分析",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["深度学习", "NLP", "文本分类", "机器翻译"]
+  },
+  {
+    "id": "qa_multi_16",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "如何评估RAG系统的检索质量？",
+    "expected_output": "评估RAG检索质量：使用召回率Recall、精确率Precision、MRR、NDCG等指标",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["召回率", "精确率", "MRR", "NDCG"]
+  },
+  {
+    "id": "qa_multi_17",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "FastAPI和Python的类型提示有什么关系？",
+    "expected_output": "FastAPI利用Python类型提示自动生成API文档、进行数据验证、提供IDE支持",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["FastAPI", "类型提示", "Pydantic", "数据验证"]
+  },
+  {
+    "id": "qa_multi_18",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "机器学习模型如何部署到Docker容器？",
+    "expected_output": "模型部署到Docker：保存模型文件、编写FastAPI服务、创建Dockerfile、构建镜像运行",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["机器学习", "Docker", "FastAPI", "部署"]
+  },
+  {
+    "id": "qa_multi_19",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "Embedding模型如何选择？",
+    "expected_output": "Embedding模型选择：考虑维度、性能、多语言支持、开源vs API、MTEB排行榜",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Embedding", "MTEB", "维度", "多语言"]
+  },
+  {
+    "id": "qa_multi_20",
+    "scenario": "knowledge_qa_multi_doc",
+    "input": "LangChain和LangGraph有什么区别？",
+    "expected_output": "LangChain是AI应用开发框架，LangGraph专注于Agent工作流编排，支持状态管理和循环",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["LangChain", "LangGraph", "Agent", "状态管理"]
+  },
+  {
+    "id": "chitchat_07",
+    "scenario": "chitchat",
+    "input": "早上好",
+    "expected_output": "早上好",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_08",
+    "scenario": "chitchat",
+    "input": "晚上好",
+    "expected_output": "晚上好",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_09",
+    "scenario": "chitchat",
+    "input": "再见",
+    "expected_output": "再见",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_10",
+    "scenario": "chitchat",
+    "input": "拜拜",
+    "expected_output": "拜拜",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_11",
+    "scenario": "chitchat",
+    "input": "谢谢你",
+    "expected_output": "不客气",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_12",
+    "scenario": "chitchat",
+    "input": "感谢你的帮助",
+    "expected_output": "不客气",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_13",
+    "scenario": "chitchat",
+    "input": "你能做什么？",
+    "expected_output": "助手",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_14",
+    "scenario": "chitchat",
+    "input": "今天几号？",
+    "expected_output": "日期",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_15",
+    "scenario": "chitchat",
+    "input": "你是人工智能吗？",
+    "expected_output": "AI助手",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_16",
+    "scenario": "chitchat",
+    "input": "我喜欢你",
+    "expected_output": "感谢",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_17",
+    "scenario": "chitchat",
+    "input": "你吃饭了吗？",
+    "expected_output": "吃饭",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "chitchat_18",
+    "scenario": "chitchat",
+    "input": "帮我算一下2+3",
+    "expected_output": "5",
+    "expected_intent": "chitchat",
+    "retrieval_context_keywords": []
+  },
+  {
+    "id": "doc_analysis_01",
+    "scenario": "document_analysis",
+    "input": "请帮我总结这个文档的主要内容",
+    "expected_output": "文档总结",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["文档", "总结"]
+  },
+  {
+    "id": "doc_analysis_02",
+    "scenario": "document_analysis",
+    "input": "这个PDF讲了什么？",
+    "expected_output": "PDF内容分析",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["PDF", "分析"]
+  },
+  {
+    "id": "doc_analysis_03",
+    "scenario": "document_analysis",
+    "input": "帮我提取文档中的关键信息",
+    "expected_output": "关键信息提取",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["提取", "关键信息"]
+  },
+  {
+    "id": "doc_analysis_04",
+    "scenario": "document_analysis",
+    "input": "这份报告的主要结论是什么？",
+    "expected_output": "报告结论",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["报告", "结论"]
+  },
+  {
+    "id": "doc_analysis_05",
+    "scenario": "document_analysis",
+    "input": "文档中提到了哪些数据？",
+    "expected_output": "数据提取",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["数据", "提取"]
+  },
+  {
+    "id": "doc_analysis_06",
+    "scenario": "document_analysis",
+    "input": "帮我翻译这个文档",
+    "expected_output": "文档翻译",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["翻译", "文档"]
+  },
+  {
+    "id": "doc_analysis_07",
+    "scenario": "document_analysis",
+    "input": "这个文档的目录结构是什么？",
+    "expected_output": "目录结构",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["目录", "结构"]
+  },
+  {
+    "id": "multimodal_01",
+    "scenario": "multimodal",
+    "input": "这张图片是什么？",
+    "expected_output": "图片描述",
+    "expected_intent": "multimodal",
+    "retrieval_context_keywords": ["图片", "描述"]
+  },
+  {
+    "id": "multimodal_02",
+    "scenario": "multimodal",
+    "input": "帮我分析这张截图",
+    "expected_output": "截图分析",
+    "expected_intent": "multimodal",
+    "retrieval_context_keywords": ["截图", "分析"]
+  },
+  {
+    "id": "multimodal_03",
+    "scenario": "multimodal",
+    "input": "图片里有什么内容？",
+    "expected_output": "图片内容",
+    "expected_intent": "multimodal",
+    "retrieval_context_keywords": ["图片", "内容"]
+  },
+  {
+    "id": "multimodal_04",
+    "scenario": "multimodal",
+    "input": "这张图表显示了什么趋势？",
+    "expected_output": "图表趋势分析",
+    "expected_intent": "multimodal",
+    "retrieval_context_keywords": ["图表", "趋势"]
+  },
+  {
+    "id": "multimodal_05",
+    "scenario": "multimodal",
+    "input": "图片中的文字是什么？",
+    "expected_output": "OCR文字识别",
+    "expected_intent": "multimodal",
+    "retrieval_context_keywords": ["OCR", "文字识别"]
+  },
+  {
+    "id": "multimodal_06",
+    "scenario": "multimodal",
+    "input": "这张照片是在哪里拍的？",
+    "expected_output": "地点识别",
+    "expected_intent": "multimodal",
+    "retrieval_context_keywords": ["地点", "识别"]
+  },
+  {
+    "id": "multimodal_07",
+    "scenario": "multimodal",
+    "input": "帮我描述一下这张图片的风格",
+    "expected_output": "图片风格描述",
+    "expected_intent": "multimodal",
+    "retrieval_context_keywords": ["风格", "描述"]
+  },
+  {
+    "id": "web_content_01",
+    "scenario": "web_content",
+    "input": "帮我总结这个网页的内容",
+    "expected_output": "网页内容总结",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["网页", "总结"]
+  },
+  {
+    "id": "web_content_02",
+    "scenario": "web_content",
+    "input": "这个网页讲了什么？",
+    "expected_output": "网页内容分析",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["网页", "分析"]
+  },
+  {
+    "id": "web_content_03",
+    "scenario": "web_content",
+    "input": "网页中的关键信息有哪些？",
+    "expected_output": "关键信息提取",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["网页", "关键信息"]
+  },
+  {
+    "id": "web_content_04",
+    "scenario": "web_content",
+    "input": "这个网页的作者是谁？",
+    "expected_output": "作者信息",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["网页", "作者"]
+  },
+  {
+    "id": "web_content_05",
+    "scenario": "web_content",
+    "input": "网页中提到了哪些产品？",
+    "expected_output": "产品信息提取",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["网页", "产品"]
+  },
+  {
+    "id": "web_content_06",
+    "scenario": "web_content",
+    "input": "帮我对比网页中的几个方案",
+    "expected_output": "方案对比分析",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["网页", "对比"]
+  },
+  {
+    "id": "web_content_07",
+    "scenario": "web_content",
+    "input": "这个网页的发布时间是什么时候？",
+    "expected_output": "发布时间",
+    "expected_intent": "document_analysis",
+    "retrieval_context_keywords": ["网页", "发布时间"]
+  },
+  {
+    "id": "multi_turn_06",
+    "scenario": "multi_turn",
+    "input": "它有什么优点？",
+    "conversation_history": [
+      {"role": "user", "content": "什么是FastAPI？"},
+      {"role": "assistant", "content": "FastAPI是现代Python Web框架。"}
+    ],
+    "expected_output": "FastAPI的优点包括高性能、自动文档、类型安全",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["FastAPI", "高性能", "自动文档"]
+  },
+  {
+    "id": "multi_turn_07",
+    "scenario": "multi_turn",
+    "input": "怎么安装它？",
+    "conversation_history": [
+      {"role": "user", "content": "什么是Docker？"},
+      {"role": "assistant", "content": "Docker是容器化技术平台。"}
+    ],
+    "expected_output": "安装Docker可以通过官方网站下载安装包，或使用包管理器",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Docker", "安装"]
+  },
+  {
+    "id": "multi_turn_08",
+    "scenario": "multi_turn",
+    "input": "它的应用场景有哪些？",
+    "conversation_history": [
+      {"role": "user", "content": "什么是Embedding？"},
+      {"role": "assistant", "content": "Embedding是将数据转换为向量的技术。"}
+    ],
+    "expected_output": "Embedding的应用场景包括语义搜索、推荐系统、文本分类",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Embedding", "语义搜索", "推荐系统"]
+  },
+  {
+    "id": "multi_turn_09",
+    "scenario": "multi_turn",
+    "input": "它和传统方法有什么区别？",
+    "conversation_history": [
+      {"role": "user", "content": "什么是Transformer？"},
+      {"role": "assistant", "content": "Transformer是基于注意力机制的模型架构。"}
+    ],
+    "expected_output": "Transformer相比RNN可以并行计算，使用自注意力机制捕获长距离依赖",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["Transformer", "RNN", "自注意力", "并行"]
+  },
+  {
+    "id": "multi_turn_10",
+    "scenario": "multi_turn",
+    "input": "它有哪些局限性？",
+    "conversation_history": [
+      {"role": "user", "content": "什么是RAG技术？"},
+      {"role": "assistant", "content": "RAG是检索增强生成技术。"}
+    ],
+    "expected_output": "RAG的局限性包括检索质量依赖、上下文窗口限制、实时性挑战",
+    "expected_intent": "knowledge_qa",
+    "retrieval_context_keywords": ["RAG", "局限性", "检索质量"]
   }
 ]

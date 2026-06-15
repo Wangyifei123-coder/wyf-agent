@@ -22,18 +22,235 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .stApp { max-width: 1200px; margin: 0 auto; }
-    .intent-tag {
-        display: inline-block; padding: 2px 8px; border-radius: 4px;
-        font-size: 12px; font-weight: bold; margin-left: 8px;
+    /* ===== 全局布局 ===== */
+    .stApp {
+        max-width: 1200px;
+        margin: 0 auto;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
-    .intent-chitchat { background: #e8f5e9; color: #2e7d32; }
-    .intent-knowledge_qa { background: #e3f2fd; color: #1565c0; }
-    .intent-doc_analysis { background: #fff3e0; color: #e65100; }
+    .stApp > header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 0.5rem 0;
+    }
+
+    /* ===== 登录页面 ===== */
+    [data-testid="stForm"] {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+    [data-testid="stForm"] h1, [data-testid="stForm"] h2 {
+        text-align: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+    }
+    [data-testid="stForm"] button[type="submit"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    [data-testid="stForm"] button[type="submit"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    }
+
+    /* ===== 侧边栏 ===== */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f8f9ff 0%, #f0f2ff 100%);
+        border-right: 1px solid rgba(102, 126, 234, 0.1);
+    }
+    [data-testid="stSidebar"] [data-testid="stButton"] button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    [data-testid="stSidebar"] [data-testid="stButton"] button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    [data-testid="stSidebar"] [data-testid="stMetric"] {
+        background: white;
+        padding: 1rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid rgba(102, 126, 234, 0.1);
+    }
+    [data-testid="stSidebar"] [data-testid="stMetric"] label {
+        color: #667eea;
+        font-weight: 600;
+    }
+    [data-testid="stSidebar"] h1 {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+    }
+
+    /* ===== 意图标签 ===== */
+    .intent-tag {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 8px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+    }
+    .intent-tag:hover { transform: scale(1.05); }
+    .intent-chitchat {
+        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        color: #2e7d32;
+        border: 1px solid #a5d6a7;
+    }
+    .intent-knowledge_qa {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        color: #1565c0;
+        border: 1px solid #90caf9;
+    }
+    .intent-doc_analysis {
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        color: #e65100;
+        border: 1px solid #ffcc80;
+    }
+
+    /* ===== 引用来源 ===== */
     .source-tag {
-        display: inline-block; padding: 2px 6px; border-radius: 3px;
-        background: #f5f5f5; color: #616161; font-size: 11px;
-        margin: 2px 4px 2px 0;
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
+        color: #424242;
+        font-size: 11px;
+        font-weight: 500;
+        margin: 3px 4px 3px 0;
+        border: 1px solid #e0e0e0;
+        transition: all 0.2s ease;
+    }
+    .source-tag:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: transparent;
+        transform: translateY(-1px);
+    }
+
+    /* ===== 消息气泡 ===== */
+    [data-testid="stChatMessage"] {
+        border-radius: 16px;
+        padding: 1.2rem;
+        margin: 0.5rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+    [data-testid="stChatMessage"]:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    [data-testid="stChatMessage"][data-testid-type="user"] {
+        background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+        border-left: 4px solid #667eea;
+    }
+    [data-testid="stChatMessage"][data-testid-type="assistant"] {
+        background: white;
+        border-left: 4px solid #764ba2;
+    }
+
+    /* ===== 图片样式 ===== */
+    [data-testid="stImage"] {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border: 2px solid white;
+    }
+    [data-testid="stImage"]:hover {
+        transform: scale(1.02);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    [data-testid="stImage"] img {
+        border-radius: 10px;
+    }
+
+    /* ===== 聊天输入框 ===== */
+    [data-testid="stChatInput"] {
+        border-radius: 24px;
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        padding: 1rem;
+        background: white;
+        transition: all 0.3s ease;
+    }
+    [data-testid="stChatInput"]:focus-within {
+        border-color: #667eea;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+    }
+
+    /* ===== 按钮通用样式 ===== */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    /* ===== 状态提示 ===== */
+    .stAlert {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* ===== 分割线 ===== */
+    hr {
+        border: none;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.3), transparent);
+        margin: 1.5rem 0;
+    }
+
+    /* ===== 标题样式 ===== */
+    h1, h2, h3 {
+        color: #1a1a2e;
+        font-weight: 700;
+    }
+
+    /* ===== 隐藏 Streamlit 默认元素 ===== */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stDeployButton {display: none;}
+
+    /* ===== 动画效果 ===== */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    [data-testid="stChatMessage"] {
+        animation: fadeIn 0.3s ease-out;
     }
     </style>
     """,

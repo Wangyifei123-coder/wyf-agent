@@ -31,6 +31,7 @@ class LLMConfig:
     max_tokens: int = 4096
     temperature: float = 0.1
     timeout: int = 30
+    stream_timeout: int = 120
     max_retries: int = 3
 
 
@@ -136,20 +137,41 @@ class LLMClient:
         import litellm
 
         target_model = model or self.config.primary_model
-        kwargs: dict[str, object] = {
-            "model": target_model,
-            "messages": messages,
-            "temperature": self.config.temperature,
-            "max_tokens": self.config.max_tokens,
-            "stream": True,
-        }
-        if self.config.api_base:
-            kwargs["api_base"] = self.config.api_base
-        if self.config.api_key:
-            kwargs["api_key"] = self.config.api_key
-        response = await litellm.acompletion(**kwargs)
 
-        async for chunk in response:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                yield delta
+        for attempt in range(self.config.max_retries):
+            try:
+                kwargs: dict[str, object] = {
+                    "model": target_model,
+                    "messages": messages,
+                    "temperature": self.config.temperature,
+                    "max_tokens": self.config.max_tokens,
+                    "stream": True,
+                    "timeout": self.config.stream_timeout,
+                }
+                if self.config.api_base:
+                    kwargs["api_base"] = self.config.api_base
+                if self.config.api_key:
+                    kwargs["api_key"] = self.config.api_key
+
+                start = time.monotonic()
+                response = await litellm.acompletion(**kwargs)
+
+                async for chunk in response:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        yield delta
+
+                latency = (time.monotonic() - start) * 1000
+                logger.info("llm_stream_success", model=target_model, latency_ms=round(latency, 2))
+                return
+
+            except Exception as e:
+                logger.warning(
+                    "llm_stream_failed",
+                    model=target_model,
+                    attempt=attempt + 1,
+                    error=str(e),
+                )
+                if attempt == self.config.max_retries - 1:
+                    max_r = self.config.max_retries
+                    raise RuntimeError(f"Stream failed after {max_r} retries: {e}") from e

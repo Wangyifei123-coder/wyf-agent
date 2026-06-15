@@ -76,10 +76,27 @@ def extract_title_from_html(html: str) -> str:
 
 
 async def fetch_webpage(url: str) -> tuple[str, str]:
-    """获取网页 HTML 内容"""
+    """Get webpage HTML content, using Selenium for anti-bot sites"""
+    from .selenium_loader import fetch_with_selenium
+
+    try:
+        html, final_url = await fetch_with_selenium(url)
+        return html, final_url
+    except Exception as e:
+        logger.warning("selenium_failed", url=url[:80], error=str(e))
+
     async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
         }
         response = await client.get(url, headers=headers)
         response.raise_for_status()

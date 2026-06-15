@@ -87,6 +87,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         fallback_model=os.getenv("LLM_FALLBACK_MODEL", "anthropic/mimo-v2.5"),
         api_base=os.getenv("ANTHROPIC_API_BASE", ""),
         api_key=os.getenv("ANTHROPIC_API_KEY", ""),
+        timeout=int(os.getenv("LLM_TIMEOUT", "30")),
+        stream_timeout=int(os.getenv("LLM_STREAM_TIMEOUT", "120")),
     )
     llm_client = LLMClient(config)
     memory_manager = MemoryManager()
