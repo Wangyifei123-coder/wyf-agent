@@ -183,5 +183,12 @@ taskkill /PID <pid> /F
   - 系统托盘 ✅
   - 全局快捷键 ✅
   - 构建打包 ⏳（需要 electron-builder 配置）
+  - API 地址配置修复 ✅（8080 → 8081）
+  - React 19 createRoot API 适配 ✅
+  - 资源路径相对路径修复 ✅
+  - 隐藏菜单栏 ✅
+- 天气工具优化（MCP test_server）✅
+  - 模拟数据改为真实 API（wttr.in）✅
+  - 中文城市名 URL 编码修复 ✅
 - 多 Agent 角色和通信协议（Step 7）⏳（计划已创建）
 - 完善测试体系（A/B 测试、基准对比）（Step 9）

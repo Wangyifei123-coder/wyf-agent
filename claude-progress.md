@@ -126,6 +126,21 @@
   - `aaf000a` feat: add Electron desktop app with React UI
 - **下一步最佳动作**：实现多 Agent 角色和通信协议
 
+### Session 004 — 2026-06-16
+
+- **本轮目标**：修复桌面应用问题，优化天气工具
+- **已完成**：
+  - **桌面应用修复**：
+    - API 地址配置修复（8080 → 8081）
+    - React 19 createRoot API 适配（修复 `render is not a function` 错误）
+    - 资源路径相对路径修复（添加 `"homepage": "."`）
+    - 隐藏菜单栏（`setMenuBarVisibility(false)`）
+  - **天气工具优化**：
+    - 模拟数据改为真实 API（wttr.in）
+    - 中文城市名 URL 编码修复（`urllib.parse.quote`）
+- **运行过的验证**：桌面应用登录成功，天气查询成功
+- **下一步最佳动作**：实现多 Agent 角色和通信协议
+
 ## 功能完成度
 
 | 功能 | 状态 | 测试 | 证据 |
