@@ -1,0 +1,39 @@
+{
+  "name": "wyf-agent-desktop",
+  "version": "1.0.0",
+  "description": "WYF Agent Desktop - AI智能助手",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:main\"",
+    "dev:main": "electron . --dev",
+    "dev:renderer": "cd src/renderer && npm run dev",
+    "build": "cd src/renderer && npm run build && electron-builder",
+    "build:win": "cd src/renderer && npm run build && electron-builder --win"
+  },
+  "keywords": ["ai", "agent", "desktop"],
+  "author": "WYF",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "build": {
+    "appId": "com.wyf.agent",
+    "productName": "WYF Agent",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
