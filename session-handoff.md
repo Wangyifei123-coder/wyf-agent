@@ -190,5 +190,10 @@ taskkill /PID <pid> /F
 - 天气工具优化（MCP test_server）✅
   - 模拟数据改为真实 API（wttr.in）✅
   - 中文城市名 URL 编码修复 ✅
+- 长期记忆系统完善 ✅
+  - ChromaDB 持久化存储 ✅
+  - 对话流程集成 remember/recall ✅
+  - 记忆管理 API 端点 ✅
+  - 超时机制和错误处理 ✅
 - 多 Agent 角色和通信协议（Step 7）⏳（计划已创建）
 - 完善测试体系（A/B 测试、基准对比）（Step 9）

@@ -141,6 +141,29 @@
 - **运行过的验证**：桌面应用登录成功，天气查询成功
 - **下一步最佳动作**：实现多 Agent 角色和通信协议
 
+### Session 005 — 2026-06-16
+
+- **本轮目标**：完善长期记忆系统，实现持久化和对话集成
+- **已完成**：
+  - **长期记忆持久化**：
+    - ChromaDB 持久化存储（data/chroma/wyf-agent-memory）
+    - 启动时自动加载已有记忆
+    - 存储/检索操作超时机制（10秒）
+  - **对话流程集成**：
+    - 对话前：recall 检索相关记忆，注入上下文
+    - 对话后：remember 保存对话内容到长期记忆
+    - 重要性自动判断（关键词/问号）
+  - **记忆管理 API**：
+    - POST /memory/store - 手动存储记忆
+    - POST /memory/recall - 手动检索记忆
+    - GET /memory/stats - 查看记忆统计
+    - POST /memory/cleanup - 清理过期记忆
+- **运行过的验证**：记忆存储、检索、统计 API 测试通过
+- **提交记录**：
+  - `e5c9eec` feat: implement long-term memory with ChromaDB persistence
+  - `7fa5007` fix: add timeout to ChromaDB operations
+- **下一步最佳动作**：实现多 Agent 角色和通信协议
+
 ## 功能完成度
 
 | 功能 | 状态 | 测试 | 证据 |
