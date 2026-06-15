@@ -53,6 +53,11 @@
   - 5 个 MCP 服务器（test-tools, filesystem, database, search, api）✅
   - 规则匹配 + 置信度判断 ✅
   - OpenAI 原生 Function Calling ✅
+  - 输入校验（JSON Schema）✅
+  - 超时控制（asyncio.wait_for）✅
+  - 熔断机制（CircuitBreaker）✅
+  - 结果截断（max_result_length）✅
+  - 审计日志（入参/出参/耗时）✅
 
 ## 本轮改动
 
