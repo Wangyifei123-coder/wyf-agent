@@ -162,6 +162,25 @@
 - **提交记录**：
   - `e5c9eec` feat: implement long-term memory with ChromaDB persistence
   - `7fa5007` fix: add timeout to ChromaDB operations
+- **下一步最佳动作**：实现推理引擎
+
+### Session 006 — 2026-06-16
+
+- **本轮目标**：实现完整推理引擎，支持三种推理模式
+- **已完成**：
+  - **推理引擎**：
+    - ReAct 模式：思考→行动→观察循环
+    - Plan-and-Execute 模式：先规划再执行
+    - Reflexion 模式：失败后自我反思再重试
+    - 最大循环次数限制（15次）
+    - 最大反思次数限制（3次）
+    - 自动模式选择（根据查询内容）
+  - **API 端点**：
+    - POST /reasoning - 执行推理
+    - GET /reasoning/modes - 获取可用模式
+- **运行过的验证**：基础测试通过
+- **提交记录**：
+  - `784c141` feat: implement reasoning engine with ReAct, Plan-and-Execute, and Reflexion modes
 - **下一步最佳动作**：实现多 Agent 角色和通信协议
 
 ## 功能完成度

@@ -195,5 +195,11 @@ taskkill /PID <pid> /F
   - 对话流程集成 remember/recall ✅
   - 记忆管理 API 端点 ✅
   - 超时机制和错误处理 ✅
+- 推理引擎实现 ✅
+  - ReAct 模式（思考→行动→观察循环）✅
+  - Plan-and-Execute 模式（先规划再执行）✅
+  - Reflexion 模式（失败后自我反思再重试）✅
+  - 最大循环次数限制 ✅
+  - 自动模式选择 ✅
 - 多 Agent 角色和通信协议（Step 7）⏳（计划已创建）
 - 完善测试体系（A/B 测试、基准对比）（Step 9）

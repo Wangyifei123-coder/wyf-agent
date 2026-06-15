@@ -112,14 +112,14 @@
     "area": "reasoning",
     "title": "ReAct 推理",
     "user_visible_behavior": "复杂问题能分步推理，展示思考过程",
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "多步推理正确执行",
       "推理步骤可追踪",
       "最大迭代限制生效"
     ],
-    "evidence": "",
-    "notes": ""
+    "evidence": "2026-06-16: ReasoningEngine 实现 ReAct/Plan-and-Execute/Reflexion 三种模式，最大迭代15次，最大反思3次",
+    "notes": "支持自动模式选择，API 端点 POST /reasoning"
   },
   {
     "id": "observability",
