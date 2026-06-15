@@ -219,6 +219,11 @@ class RAGGraph:
             logger.info("intent_routed", intent="chitchat", reason="keyword_fast_path")
             return {"intent": Intent.CHITCHAT}
 
+        tool_call = await self._check_tool_call(query)
+        if tool_call:
+            logger.info("intent_routed", intent="tool_call", tool=tool_call.get("name"))
+            return {"intent": Intent.TOOL_CALL, "tool_call": tool_call}
+
         start = time.monotonic()
         prompt = ROUTE_PROMPT.format(query=query)
         response = await self.llm.chat([{"role": "user", "content": prompt}])
@@ -232,11 +237,6 @@ class RAGGraph:
         else:
             intent = Intent.KNOWLEDGE_QA
 
-            tool_call = await self._check_tool_call(query)
-            if tool_call:
-                logger.info("intent_routed", intent="tool_call", tool=tool_call.get("name"))
-                return {"intent": Intent.TOOL_CALL, "tool_call": tool_call}
-
         logger.info("intent_routed", intent=intent.value, latency_ms=round(elapsed, 2))
         return {"intent": intent}
 
@@ -248,20 +248,25 @@ class RAGGraph:
         if not tools:
             return None
 
-        tool_prompt = f"""你是一个工具调用助手。根据用户的问题，判断是否需要调用工具。
+        tool_prompt = f"""判断用户问题是否需要调用工具。
 
 可用工具:
 {self._format_tools_for_prompt(tools)}
 
+判断规则:
+1. 如果用户要求计算数学表达式（如 "计算 1+2"、"123*456"），使用 mcp_test-tools_calculator 工具
+2. 如果用户询问天气（如 "北京天气"、"上海今天天气"），使用 mcp_test-tools_get_weather 工具
+3. 如果用户要求统计文本（如 "统计字数"、"字符数"），使用 mcp_test-tools_text_count 工具
+4. 如果问题可以用工具解决，优先使用工具
+5. 如果是闲聊、问答、知识查询等，不需要调用工具
+
 用户问题: {query}
 
-如果需要调用工具，返回 JSON 格式：
-{{"need_tool": true, "tool_name": "工具名", "arguments": {{"参数名": "参数值"}}}}
+返回 JSON:
+如果需要调用工具: {{"need_tool": true, "tool_name": "完整的工具名", "arguments": {{"参数名": "参数值"}}}}
+如果不需要: {{"need_tool": false}}
 
-如果不需要调用工具，返回：
-{{"need_tool": false}}
-
-只返回 JSON，不要解释："""
+只返回 JSON:"""
 
         try:
             response = await self.llm.chat([{"role": "user", "content": tool_prompt}])
