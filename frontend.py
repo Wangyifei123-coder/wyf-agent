@@ -233,6 +233,39 @@ st.markdown(
         margin: 1.5rem 0;
     }
 
+    /* ===== 加载动画 ===== */
+    .loading-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        border-radius: 50%;
+        border-top-color: #667eea;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* ===== 计时器显示 ===== */
+    .timer-display {
+        font-size: 12px;
+        color: #667eea;
+        padding: 4px 12px;
+        background: linear-gradient(
+            135deg,
+            rgba(102, 126, 234, 0.08) 0%,
+            rgba(118, 75, 162, 0.08) 100%
+        );
+        border-radius: 20px;
+        display: inline-block;
+        margin-top: 8px;
+        font-weight: 500;
+        border: 1px solid rgba(102, 126, 234, 0.15);
+    }
+
     /* ===== 标题样式 ===== */
     h1, h2, h3 {
         color: #1a1a2e;
@@ -494,11 +527,26 @@ if prompt := st.chat_input("输入你的问题或网页URL..."):
 
         with st.chat_message("assistant"):
             import json as _json
+            import time
 
             placeholder = st.empty()
+            timer_placeholder = st.empty()
             full_answer = ""
             intent = "knowledge_qa"
             sources: list[str] = []
+
+            start_time = time.time()
+
+            def update_timer():
+                elapsed = time.time() - start_time
+                timer_placeholder.markdown(
+                    f'<div class="timer-display">'
+                    f'<span class="loading-spinner"></span>'
+                    f'思考中... {elapsed:.1f}s</div>',
+                    unsafe_allow_html=True,
+                )
+
+            update_timer()
 
             try:
                 with httpx.Client(timeout=180) as client:
@@ -522,6 +570,7 @@ if prompt := st.chat_input("输入你的问题或网页URL..."):
                             elif msg_type == "chunk":
                                 chunk = data.get("chunk", "")
                                 full_answer += chunk
+                                update_timer()
                                 placeholder.markdown(full_answer)
                             elif msg_type == "done":
                                 intent = data.get("intent", intent)
@@ -529,6 +578,13 @@ if prompt := st.chat_input("输入你的问题或网页URL..."):
                                 break
             except Exception as e:
                 st.error(f"请求失败: {e}")
+
+            elapsed = time.time() - start_time
+            timer_placeholder.markdown(
+                f'<div class="timer-display">'
+                f'回答完成 {elapsed:.1f}s</div>',
+                unsafe_allow_html=True,
+            )
 
             if full_answer:
                 placeholder.markdown(full_answer)
