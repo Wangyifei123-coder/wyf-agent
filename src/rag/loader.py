@@ -21,6 +21,11 @@ EXTENSION_MAP: dict[str, str] = {
     ".docx": "docx",
     ".xlsx": "xlsx",
     ".csv": "csv",
+    ".png": "image",
+    ".jpg": "image",
+    ".jpeg": "image",
+    ".gif": "image",
+    ".webp": "image",
 }
 
 
@@ -92,6 +97,11 @@ def load_csv(path: str) -> Document:
     return Document(content=text, metadata={"file_type": "csv", "source": path})
 
 
+def load_image(path: str) -> Document:
+    logger.info("loaded_image", path=path)
+    return Document(content="", metadata={"file_type": "image", "source": path})
+
+
 _LOADERS = {
     "markdown": load_markdown,
     "text": load_text,
@@ -99,6 +109,7 @@ _LOADERS = {
     "docx": load_docx,
     "xlsx": load_xlsx,
     "csv": load_csv,
+    "image": load_image,
 }
 
 

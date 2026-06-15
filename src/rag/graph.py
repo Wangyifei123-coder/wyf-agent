@@ -31,6 +31,7 @@ class RAGState(TypedDict, total=False):
     intent: Intent
     conversation_history: list[dict[str, str]]
     uploaded_doc: str | None
+    images: list[str] | None
     rewritten_query: str
     sub_queries: list[str]
     retrieved_docs: list[Document]
@@ -183,6 +184,11 @@ class RAGGraph:
     async def _route_intent(self, state: RAGState) -> dict[str, Any]:
         query = state["query"]
         uploaded_doc = state.get("uploaded_doc")
+        images = state.get("images")
+
+        if images:
+            logger.info("intent_routed", intent="doc_analysis", reason="images")
+            return {"intent": Intent.DOC_ANALYSIS}
 
         if uploaded_doc:
             logger.info("intent_routed", intent="doc_analysis", reason="uploaded_doc")
@@ -328,13 +334,21 @@ class RAGGraph:
     async def _generate_direct(self, state: RAGState) -> dict[str, Any]:
         query = state["query"]
         history = state.get("conversation_history", [])
+        images = state.get("images")
 
-        messages: list[dict[str, str]] = [
+        messages: list[dict[str, Any]] = [
             {"role": "system", "content": "你是一个友好的AI助手,用自然友好的方式回答问题。"},
         ]
         if history:
             messages.extend(history[-6:])
-        messages.append({"role": "user", "content": query})
+
+        if images:
+            content: list[dict[str, Any]] = [{"type": "text", "text": query}]
+            for img_b64 in images:
+                content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}})
+            messages.append({"role": "user", "content": content})
+        else:
+            messages.append({"role": "user", "content": query})
 
         response = await self.llm.chat(messages)
 
@@ -344,11 +358,19 @@ class RAGGraph:
     async def _generate_with_context(self, state: RAGState) -> dict[str, Any]:
         query = state["query"]
         doc_content = state.get("uploaded_doc", "")
+        images = state.get("images")
 
-        context = f"用户上传的文档内容:\n{doc_content}"
+        if images:
+            content: list[dict[str, Any]] = [{"type": "text", "text": query}]
+            for img_b64 in images:
+                content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}})
+            messages: list[dict[str, Any]] = [{"role": "user", "content": content}]
+        else:
+            context = f"用户上传的文档内容:\n{doc_content}"
+            prompt = GENERATE_PROMPT.format(context=context, query=query)
+            messages = [{"role": "user", "content": prompt}]
 
-        prompt = GENERATE_PROMPT.format(context=context, query=query)
-        response = await self.llm.chat([{"role": "user", "content": prompt}])
+        response = await self.llm.chat(messages)
 
         logger.info("doc_analysis_generated")
         return {"answer": response.content, "sources": ["uploaded_document"]}
@@ -361,11 +383,13 @@ class RAGGraph:
         query: str,
         conversation_history: list[dict[str, str]] | None = None,
         uploaded_doc: str | None = None,
+        images: list[str] | None = None,
     ) -> RAGState:
         initial_state: RAGState = {
             "query": query,
             "conversation_history": conversation_history or [],
             "uploaded_doc": uploaded_doc,
+            "images": images,
             "iteration": 0,
         }
 
@@ -384,12 +408,14 @@ class RAGGraph:
         query: str,
         conversation_history: list[dict[str, str]] | None = None,
         uploaded_doc: str | None = None,
+        images: list[str] | None = None,
     ) -> Any:
 
         initial_state: RAGState = {
             "query": query,
             "conversation_history": conversation_history or [],
             "uploaded_doc": uploaded_doc,
+            "images": images,
             "iteration": 0,
         }
 
@@ -400,12 +426,19 @@ class RAGGraph:
         intent_value = intent.value if hasattr(intent, "value") else str(intent)
 
         if intent_value == "chitchat":
-            messages: list[dict[str, str]] = [
+            messages: list[dict[str, Any]] = [
                 {"role": "system", "content": "你是一个友好的AI助手,用自然友好的方式回答问题。"},
             ]
             if conversation_history:
                 messages.extend(conversation_history[-6:])
-            messages.append({"role": "user", "content": query})
+
+            if images:
+                content: list[dict[str, Any]] = [{"type": "text", "text": query}]
+                for img_b64 in images:
+                    content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}})
+                messages.append({"role": "user", "content": content})
+            else:
+                messages.append({"role": "user", "content": query})
 
             async def chitchat_stream() -> Any:
                 async for chunk in self.llm.stream_chat(messages):
@@ -417,10 +450,17 @@ class RAGGraph:
             yield {"type": "done"}
             return
 
-        if intent_value == "doc_analysis" and uploaded_doc:
-            context = f"用户上传的文档内容:\n{uploaded_doc}"
+        if intent_value == "doc_analysis" and (uploaded_doc or images):
+            context = f"用户上传的文档内容:\n{uploaded_doc}" if uploaded_doc else ""
             prompt = GENERATE_PROMPT.format(context=context, query=query)
-            messages = [{"role": "user", "content": prompt}]
+
+            if images:
+                msg_content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+                for img_b64 in images:
+                    msg_content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}})
+                messages = [{"role": "user", "content": msg_content}]
+            else:
+                messages = [{"role": "user", "content": prompt}]
 
             yield {"type": "intent", "intent": intent_value, "sources": ["uploaded_document"]}
             async for chunk in self.llm.stream_chat(messages):

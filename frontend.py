@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import os
 
 os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
@@ -54,7 +55,9 @@ def call_api(
         with httpx.Client(timeout=timeout) as client:
             if method == "POST":
                 resp = client.post(
-                    f"{API_BASE}{endpoint}", json=json_data, headers=headers,
+                    f"{API_BASE}{endpoint}",
+                    json=json_data,
+                    headers=headers,
                 )
             else:
                 resp = client.get(f"{API_BASE}{endpoint}", headers=headers)
@@ -81,7 +84,8 @@ if not st.session_state.token:
         submitted = st.form_submit_button("登录", use_container_width=True)
         if submitted:
             result = call_api(
-                "/auth/login", "POST",
+                "/auth/login",
+                "POST",
                 {"username": username, "password": password},
             )
             if result.get("success"):
@@ -121,6 +125,7 @@ with st.sidebar:
     )
     if uploaded_files and st.button("开始入库", use_container_width=True):
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmpdir:
             for f in uploaded_files:
                 filepath = os.path.join(tmpdir, f.name)
@@ -128,13 +133,24 @@ with st.sidebar:
                     out.write(f.getvalue())
             with st.spinner("正在入库..."):
                 result = call_api(
-                    "/knowledge/ingest", "POST",
-                    {"path": tmpdir}, token=st.session_state.token,
+                    "/knowledge/ingest",
+                    "POST",
+                    {"path": tmpdir},
+                    token=st.session_state.token,
                 )
                 st.success(
                     f"入库完成: {result.get('documents_loaded', 0)} 篇文档, "
                     f"{result.get('chunks_created', 0)} 个 chunk"
                 )
+
+    st.markdown("---")
+
+    st.subheader("图片上传")
+    uploaded_images = st.file_uploader(
+        "上传图片（可多选）",
+        type=["png", "jpg", "jpeg", "gif", "webp"],
+        accept_multiple_files=True,
+    )
 
     st.markdown("---")
 
@@ -154,6 +170,15 @@ st.title("WYF Agent 对话")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "pending_images" not in st.session_state:
+    st.session_state.pending_images = []
+
+if uploaded_images:
+    st.session_state.pending_images = uploaded_images
+    cols = st.columns(min(len(uploaded_images), 4))
+    for i, img in enumerate(uploaded_images):
+        with cols[i % 4]:
+            st.image(img, width=200, caption=img.name)
 
 for msg in st.session_state.messages:
     role = msg["role"]
@@ -162,6 +187,11 @@ for msg in st.session_state.messages:
     sources = msg.get("sources", [])
 
     with st.chat_message(role):
+        if msg.get("images"):
+            cols = st.columns(min(len(msg["images"]), 4))
+            for i, img_b64 in enumerate(msg["images"]):
+                with cols[i % 4]:
+                    st.image(base64.b64decode(img_b64), width=200)
         st.markdown(content)
         if intent and role == "assistant":
             intent_class = f"intent-{intent}"
@@ -175,15 +205,28 @@ for msg in st.session_state.messages:
                 unsafe_allow_html=True,
             )
         if sources and role == "assistant":
-            source_html = "".join(
-                f'<span class="source-tag">{s}</span>' for s in sources
-            )
+            source_html = "".join(f'<span class="source-tag">{s}</span>' for s in sources)
             st.markdown(f"**引用来源:** {source_html}", unsafe_allow_html=True)
 
 if prompt := st.chat_input("输入你的问题..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    image_b64_list = []
+    for img in st.session_state.pending_images:
+        image_b64_list.append(base64.b64encode(img.getvalue()).decode())
+
+    st.session_state.messages.append(
+        {
+            "role": "user",
+            "content": prompt,
+            "images": image_b64_list,
+        }
+    )
 
     with st.chat_message("user"):
+        if image_b64_list:
+            cols = st.columns(min(len(image_b64_list), 4))
+            for i, img_b64 in enumerate(image_b64_list):
+                with cols[i % 4]:
+                    st.image(base64.b64decode(img_b64), width=200)
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
@@ -200,7 +243,10 @@ if prompt := st.chat_input("输入你的问题..."):
                 with client.stream(
                     "POST",
                     f"{API_BASE}/chat/stream",
-                    json={"message": prompt},
+                    json={
+                        "message": prompt,
+                        "images": image_b64_list or None,
+                    },
                     headers=headers,
                 ) as response:
                     for line in response.iter_lines():
@@ -236,14 +282,15 @@ if prompt := st.chat_input("输入你的问题..."):
             )
 
             if sources:
-                source_html = "".join(
-                    f'<span class="source-tag">{s}</span>' for s in sources
-                )
+                source_html = "".join(f'<span class="source-tag">{s}</span>' for s in sources)
                 st.markdown(f"**引用来源:** {source_html}", unsafe_allow_html=True)
 
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": full_answer,
-        "intent": intent,
-        "sources": sources,
-    })
+    st.session_state.messages.append(
+        {
+            "role": "assistant",
+            "content": full_answer,
+            "intent": intent,
+            "sources": sources,
+        }
+    )
+    st.session_state.pending_images = []

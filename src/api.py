@@ -29,6 +29,7 @@ from .rag.bm25_retriever import BM25Retriever
 from .rag.embeddings import EmbeddingService
 from .rag.graph import RAGGraph
 from .rag.hybrid_retriever import HybridRetriever
+from .rag.image_describer import describe_image
 from .rag.kg_retriever import KnowledgeGraphRetriever
 from .rag.loader import load_directory
 from .rag.retriever import Retriever
@@ -82,8 +83,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging(level=os.getenv("LOG_LEVEL", "INFO"), format="json")
 
     config = LLMConfig(
-        primary_model=os.getenv("LLM_PRIMARY_MODEL", "anthropic/mimo-v2.5-pro"),
-        fallback_model=os.getenv("LLM_FALLBACK_MODEL", "anthropic/mimo-v2.5-pro"),
+        primary_model=os.getenv("LLM_PRIMARY_MODEL", "anthropic/mimo-v2.5"),
+        fallback_model=os.getenv("LLM_FALLBACK_MODEL", "anthropic/mimo-v2.5"),
         api_base=os.getenv("ANTHROPIC_API_BASE", ""),
         api_key=os.getenv("ANTHROPIC_API_KEY", ""),
     )
@@ -125,6 +126,7 @@ app = FastAPI(title="WYF Agent", version="0.1.0", lifespan=lifespan)
 
 class ChatRequest(BaseModel):
     message: str
+    images: list[str] | None = None
     session_id: str | None = None
 
 
@@ -196,7 +198,7 @@ async def chat(
         REQUEST_COUNT.labels(endpoint="/chat", status="rejected").inc()
         return ChatResponse(answer=f"Input rejected: {safety_check.reason}")
 
-    result = await rag_graph.run(request.message)
+    result = await rag_graph.run(request.message, images=request.images)
     answer = _strip_emoji(result.get("answer", ""))
     intent = result.get("intent", "knowledge_qa")
     if hasattr(intent, "value"):
@@ -253,7 +255,7 @@ async def chat_stream(
         intent = "knowledge_qa"
         sources: list[str] = []
 
-        async for event in rag_graph.run_stream(request.message):
+        async for event in rag_graph.run_stream(request.message, images=request.images):
             event_type = event.get("type")
 
             if event_type == "intent":
@@ -322,10 +324,17 @@ class IngestResponse(BaseModel):
 
 @app.post("/knowledge/ingest", response_model=IngestResponse)
 async def ingest_knowledge(request: IngestRequest) -> IngestResponse:
-    assert vector_store and hybrid_retriever
+    assert vector_store and hybrid_retriever and llm_client
     from .rag.splitter import split_documents
 
     docs = load_directory(request.path)
+
+    for doc in docs:
+        if doc.metadata.get("file_type") == "image":
+            description = await describe_image(llm_client, doc.metadata["source"])
+            doc.content = description
+            doc.metadata["file_type"] = "image_description"
+
     chunks = split_documents(docs)
 
     sources = set()
@@ -351,13 +360,20 @@ async def ingest_knowledge(request: IngestRequest) -> IngestResponse:
 
 @app.post("/knowledge/rebuild", response_model=IngestResponse)
 async def rebuild_knowledge(request: IngestRequest) -> IngestResponse:
-    assert vector_store and hybrid_retriever
+    assert vector_store and hybrid_retriever and llm_client
     from .rag.splitter import split_documents
 
     vector_store.clear()
     logger.info("knowledge_cleared")
 
     docs = load_directory(request.path)
+
+    for doc in docs:
+        if doc.metadata.get("file_type") == "image":
+            description = await describe_image(llm_client, doc.metadata["source"])
+            doc.content = description
+            doc.metadata["file_type"] = "image_description"
+
     chunks = split_documents(docs)
     vector_store.add_documents(chunks)
     hybrid_retriever.index(chunks)

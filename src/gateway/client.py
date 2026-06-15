@@ -24,8 +24,8 @@ class LLMResponse:
 
 @dataclass
 class LLMConfig:
-    primary_model: str = "anthropic/mimo-v2.5-pro"
-    fallback_model: str = "anthropic/mimo-v2.5-pro"
+    primary_model: str = "anthropic/mimo-v2.5"
+    fallback_model: str = "anthropic/mimo-v2.5"
     api_base: str = ""
     api_key: str = ""
     max_tokens: int = 4096

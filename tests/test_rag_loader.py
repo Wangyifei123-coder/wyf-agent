@@ -60,8 +60,8 @@ class TestLoadDirectory:
         (tmp_path / "image.png").write_bytes(b"\x89PNG")
         (tmp_path / "script.py").write_text("print()", encoding="utf-8")
         docs = load_directory(str(tmp_path))
-        assert len(docs) == 1
-        assert docs[0].metadata["file_type"] == "markdown"
+        types = {d.metadata["file_type"] for d in docs}
+        assert types == {"markdown", "image"}
 
     def test_recursive(self, tmp_path: Path):
         sub = tmp_path / "sub"
