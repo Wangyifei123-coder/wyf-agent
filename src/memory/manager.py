@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import math
+import time
 from dataclasses import dataclass, field
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -17,6 +19,24 @@ class Message:
     content: str
     timestamp: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class MemoryEntry:
+    key: str
+    content: str
+    importance: float = 0.5
+    access_count: int = 0
+    last_accessed: float = 0.0
+    created_at: float = 0.0
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def decay_score(self, current_time: float | None = None) -> float:
+        now = current_time or time.time()
+        hours_since_access = (now - self.last_accessed) / 3600
+        decay_factor = math.exp(-0.1 * hours_since_access)
+        access_bonus = min(self.access_count * 0.05, 0.3)
+        return (self.importance + access_bonus) * decay_factor
 
 
 class ShortTermMemory:
@@ -35,9 +55,7 @@ class ShortTermMemory:
         recent = self.messages[-last_n:]
         context = []
         if self.summary:
-            summary_text = (
-                f"Previous conversation summary: {self.summary}"
-            )
+            summary_text = f"Previous conversation summary: {self.summary}"
             context.append({"role": "system", "content": summary_text})
         for msg in recent:
             context.append({"role": msg.role, "content": msg.content})
@@ -63,30 +81,89 @@ class ShortTermMemory:
 class LongTermMemory:
     def __init__(self, collection_name: str = "wyf-agent-memory") -> None:
         self.collection_name = collection_name
-        self._store: dict[str, dict[str, Any]] = {}
+        self._entries: dict[str, MemoryEntry] = {}
 
-    async def store(self, key: str, content: str, metadata: dict[str, Any] | None = None) -> None:
-        self._store[key] = {"content": content, "metadata": metadata or {}}
-        logger.info("long_term_store", key=key, content_length=len(content))
+    async def store(
+        self,
+        key: str,
+        content: str,
+        importance: float = 0.5,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        now = time.time()
+        if key in self._entries:
+            entry = self._entries[key]
+            entry.content = content
+            entry.importance = importance
+            entry.access_count += 1
+            entry.last_accessed = now
+            entry.metadata.update(metadata or {})
+        else:
+            self._entries[key] = MemoryEntry(
+                key=key,
+                content=content,
+                importance=importance,
+                access_count=1,
+                last_accessed=now,
+                created_at=now,
+                metadata=metadata or {},
+            )
+        logger.info("long_term_store", key=key, importance=importance)
 
     async def retrieve(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
-        results = []
+        if not self._entries:
+            return []
+
+        now = time.time()
+        scored_entries: list[tuple[float, MemoryEntry]] = []
+
         query_lower = query.lower()
-        for key, entry in self._store.items():
-            content = entry["content"].lower()
-            score = sum(1 for word in query_lower.split() if word in content)
-            if score > 0:
-                results.append({
-                    "key": key,
-                    "content": entry["content"],
-                    "score": score,
-                    **entry["metadata"],
-                })
-        results.sort(key=lambda x: x["score"], reverse=True)
-        return results[:top_k]
+        for entry in self._entries.values():
+            content_lower = entry.content.lower()
+            keyword_score = sum(1 for word in query_lower.split() if word in content_lower)
+            if keyword_score > 0:
+                decay_score = entry.decay_score(now)
+                final_score = keyword_score * decay_score
+                scored_entries.append((final_score, entry))
+
+        scored_entries.sort(key=lambda x: x[0], reverse=True)
+
+        results = []
+        for score, entry in scored_entries[:top_k]:
+            entry.access_count += 1
+            entry.last_accessed = now
+            results.append({
+                "key": entry.key,
+                "content": entry.content,
+                "score": score,
+                "importance": entry.importance,
+                "access_count": entry.access_count,
+                **entry.metadata,
+            })
+
+        return results
 
     async def delete(self, key: str) -> None:
-        self._store.pop(key, None)
+        self._entries.pop(key, None)
+
+    async def cleanup(self, max_entries: int = 1000) -> int:
+        if len(self._entries) <= max_entries:
+            return 0
+
+        now = time.time()
+        entries_with_score = [
+            (entry.decay_score(now), key)
+            for key, entry in self._entries.items()
+        ]
+        entries_with_score.sort()
+
+        removed = 0
+        for _, key in entries_with_score[: len(self._entries) - max_entries]:
+            del self._entries[key]
+            removed += 1
+
+        logger.info("memory_cleanup", removed=removed)
+        return removed
 
 
 class WorkingMemory:
@@ -119,8 +196,6 @@ class MemoryManager:
         self.working = WorkingMemory()
 
     def add_message(self, role: str, content: str, **metadata: Any) -> None:
-        from datetime import datetime
-
         msg = Message(
             role=role,
             content=content,
@@ -133,12 +208,19 @@ class MemoryManager:
         return self.short_term.get_context(last_n)
 
     async def remember(
-        self, key: str, content: str, metadata: dict[str, Any] | None = None,
+        self,
+        key: str,
+        content: str,
+        importance: float = 0.5,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
-        await self.long_term.store(key, content, metadata)
+        await self.long_term.store(key, content, importance, metadata)
 
     async def recall(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
         return await self.long_term.retrieve(query, top_k)
+
+    async def cleanup_memory(self, max_entries: int = 1000) -> int:
+        return await self.long_term.cleanup(max_entries)
 
     def set_task_state(self, key: str, value: Any) -> None:
         self.working.set(key, value)
