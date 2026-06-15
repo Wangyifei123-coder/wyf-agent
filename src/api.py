@@ -34,6 +34,7 @@ from .rag.kg_retriever import KnowledgeGraphRetriever
 from .rag.loader import load_directory
 from .rag.retriever import Retriever
 from .rag.vectorstore import VectorStore
+from .reasoning.engine import ReasoningEngine, ReasoningMode
 from .reasoning.react import ReActEngine
 from .safety.auth import authenticate, get_user_role, verify_token
 from .safety.guard import SafetyGuard
@@ -49,6 +50,7 @@ logger = structlog.get_logger(__name__)
 
 llm_client: LLMClient | None = None
 react_engine: ReActEngine | None = None
+reasoning_engine: ReasoningEngine | None = None
 memory_manager: MemoryManager | None = None
 safety_guard: SafetyGuard | None = None
 tracer: Tracer | None = None
@@ -82,7 +84,7 @@ def _strip_emoji(text: str) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    global llm_client, react_engine, memory_manager, safety_guard
+    global llm_client, react_engine, reasoning_engine, memory_manager, safety_guard
     global tracer, rag_graph, vector_store, hybrid_retriever
     global mcp_manager, mcp_registry, tool_registry
 
@@ -141,6 +143,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     rag_graph = RAGGraph(llm_client, hybrid_retriever, tool_registry)
 
     react_engine = ReActEngine(llm_client, tool_registry, memory_manager)
+
+    reasoning_engine = ReasoningEngine(
+        llm=llm_client,
+        tools=tool_registry,
+        memory=memory_manager,
+        max_iterations=15,
+        max_reflections=3,
+    )
 
     logger.info("agent_initialized")
     yield
@@ -907,6 +917,108 @@ async def memory_cleanup(
         return {"success": True, "removed": removed}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+class ReasoningRequest(BaseModel):
+    query: str
+    mode: str | None = None  # "react", "plan_and_execute", "reflexion"
+
+
+class ReasoningResponse(BaseModel):
+    answer: str
+    mode: str
+    steps: list[dict[str, Any]]
+    total_iterations: int
+    total_tokens: int
+    success: bool
+    reflections: list[str] | None = None
+
+
+@app.post("/reasoning", response_model=ReasoningResponse)
+async def reasoning(
+    request: ReasoningRequest,
+    authorization: str | None = Header(None),
+) -> ReasoningResponse:
+    user = _get_current_user(authorization)
+    if not user:
+        return ReasoningResponse(
+            answer="Unauthorized",
+            mode="unknown",
+            steps=[],
+            total_iterations=0,
+            total_tokens=0,
+            success=False,
+        )
+
+    if not reasoning_engine:
+        return ReasoningResponse(
+            answer="Reasoning engine not initialized",
+            mode="unknown",
+            steps=[],
+            total_iterations=0,
+            total_tokens=0,
+            success=False,
+        )
+
+    try:
+        mode = None
+        if request.mode:
+            mode = ReasoningMode(request.mode)
+
+        result = await reasoning_engine.run(request.query, mode=mode)
+
+        steps_data = []
+        for step in result.steps:
+            steps_data.append({
+                "type": step.type,
+                "content": step.content,
+                "tool_name": step.tool_name,
+                "success": step.success,
+            })
+
+        return ReasoningResponse(
+            answer=result.answer,
+            mode=result.mode,
+            steps=steps_data,
+            total_iterations=result.total_iterations,
+            total_tokens=result.total_tokens,
+            success=result.success,
+            reflections=result.reflections if result.reflections else None,
+        )
+    except Exception as e:
+        logger.error("reasoning_error", error=str(e))
+        return ReasoningResponse(
+            answer=f"Reasoning error: {str(e)}",
+            mode="unknown",
+            steps=[],
+            total_iterations=0,
+            total_tokens=0,
+            success=False,
+        )
+
+
+@app.get("/reasoning/modes")
+async def reasoning_modes() -> dict[str, Any]:
+    return {
+        "modes": [
+            {
+                "name": "react",
+                "description": "ReAct 模式：思考 → 行动 → 观察 循环",
+                "use_case": "简单直接的任务",
+            },
+            {
+                "name": "plan_and_execute",
+                "description": "Plan-and-Execute 模式：先规划再执行",
+                "use_case": "复杂的多步骤任务",
+            },
+            {
+                "name": "reflexion",
+                "description": "Reflexion 模式：失败后自我反思再重试",
+                "use_case": "容易出错需要迭代改进的任务",
+            },
+        ],
+        "default": "auto",
+    }
 
 
 def main() -> None:
