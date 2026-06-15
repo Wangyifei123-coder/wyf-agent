@@ -560,9 +560,9 @@ async def mcp_jsonrpc(
                     error={"code": -32602, "message": "Missing server or tool name"},
                 )
 
-            mcp_tool_name = f"{server}:{tool_name}"
-            if not tool_registry.check_permission(mcp_tool_name, user_role):
-                logger.warning("mcp_permission_denied", tool=mcp_tool_name, role=user_role)
+            full_tool_name = f"mcp_{server}_{tool_name}"
+            if not tool_registry.check_permission(full_tool_name, user_role):
+                logger.warning("mcp_permission_denied", tool=full_tool_name, role=user_role)
                 return JsonRpcResponse(
                     id=request.id,
                     error={"code": -32604, "message": f"Permission denied for tool '{tool_name}'"},

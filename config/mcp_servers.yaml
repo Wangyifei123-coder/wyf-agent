@@ -43,5 +43,5 @@ servers:
     command: "cmd"
     args: ["/c", "npx", "-y", "@modelcontextprotocol/server-github"]
     env:
-      GITHUB_PERSONAL_ACCESS_TOKEN: ""
+      GITHUB_PERSONAL_ACCESS_TOKEN: "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"
     enabled: true
