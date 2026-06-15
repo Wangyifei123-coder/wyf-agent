@@ -231,7 +231,20 @@ async def chat(
         REQUEST_COUNT.labels(endpoint="/chat", status="rejected").inc()
         return ChatResponse(answer=f"Input rejected: {safety_check.reason}")
 
-    result = await rag_graph.run(request.message, images=request.images)
+    memory_context = ""
+    try:
+        recalled = await memory_manager.recall(request.message, top_k=3)
+        if recalled:
+            memory_context = "\n".join([r["content"] for r in recalled])
+            logger.info("memory_recalled", count=len(recalled))
+    except Exception as e:
+        logger.warning("memory_recall_failed", error=str(e))
+
+    enhanced_message = request.message
+    if memory_context:
+        enhanced_message = f"[相关记忆]\n{memory_context}\n\n[用户问题]\n{request.message}"
+
+    result = await rag_graph.run(enhanced_message, images=request.images)
     answer = _strip_emoji(result.get("answer", ""))
     intent = result.get("intent", "knowledge_qa")
     if hasattr(intent, "value"):
@@ -243,6 +256,22 @@ async def chat(
 
     memory_manager.add_message("user", request.message)
     memory_manager.add_message("assistant", answer)
+
+    try:
+        importance = 0.5
+        if any(kw in request.message for kw in ["记住", "记下", "remember", "重要"]):
+            importance = 0.9
+        elif "?" in request.message or "？" in request.message:
+            importance = 0.3
+
+        await memory_manager.remember(
+            key=f"conv_{int(time.time())}",
+            content=f"用户: {request.message}\n助手: {answer[:200]}",
+            importance=importance,
+            metadata={"user": user, "intent": str(intent)},
+        )
+    except Exception as e:
+        logger.warning("memory_remember_failed", error=str(e))
 
     elapsed = time.monotonic() - start
     REQUEST_COUNT.labels(endpoint="/chat", status="success").inc()
@@ -283,12 +312,25 @@ async def chat_stream(
 
     start = time.monotonic()
 
+    memory_context = ""
+    try:
+        recalled = await memory_manager.recall(request.message, top_k=3)
+        if recalled:
+            memory_context = "\n".join([r["content"] for r in recalled])
+            logger.info("memory_recalled", count=len(recalled))
+    except Exception as e:
+        logger.warning("memory_recall_failed", error=str(e))
+
+    enhanced_message = request.message
+    if memory_context:
+        enhanced_message = f"[相关记忆]\n{memory_context}\n\n[用户问题]\n{request.message}"
+
     async def generate() -> Any:
         full_answer = ""
         intent = "knowledge_qa"
         sources: list[str] = []
 
-        async for event in rag_graph.run_stream(request.message, images=request.images):
+        async for event in rag_graph.run_stream(enhanced_message, images=request.images):
             event_type = event.get("type")
 
             if event_type == "intent":
@@ -330,6 +372,22 @@ async def chat_stream(
 
                 memory_manager.add_message("user", request.message)
                 memory_manager.add_message("assistant", answer)
+
+                try:
+                    importance = 0.5
+                    if any(kw in request.message for kw in ["记住", "记下", "remember", "重要"]):
+                        importance = 0.9
+                    elif "?" in request.message or "？" in request.message:
+                        importance = 0.3
+
+                    await memory_manager.remember(
+                        key=f"conv_{int(time.time())}",
+                        content=f"用户: {request.message}\n助手: {answer[:200]}",
+                        importance=importance,
+                        metadata={"user": user, "intent": str(intent)},
+                    )
+                except Exception as e:
+                    logger.warning("memory_remember_failed", error=str(e))
 
                 elapsed = time.monotonic() - start
                 REQUEST_COUNT.labels(endpoint="/chat/stream", status="success").inc()
@@ -751,6 +809,98 @@ async def prometheus_metrics() -> Any:
         content=generate_latest(),
         media_type=CONTENT_TYPE_LATEST,
     )
+
+
+class MemoryStoreRequest(BaseModel):
+    key: str
+    content: str
+    importance: float = 0.5
+    metadata: dict[str, Any] | None = None
+
+
+class MemoryRecallRequest(BaseModel):
+    query: str
+    top_k: int = 5
+
+
+@app.post("/memory/store")
+async def memory_store(
+    request: MemoryStoreRequest,
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    user = _get_current_user(authorization)
+    if not user:
+        return {"error": "Unauthorized"}
+
+    assert memory_manager
+    try:
+        await memory_manager.remember(
+            key=request.key,
+            content=request.content,
+            importance=request.importance,
+            metadata=request.metadata,
+        )
+        return {"success": True, "key": request.key}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/memory/recall")
+async def memory_recall(
+    request: MemoryRecallRequest,
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    user = _get_current_user(authorization)
+    if not user:
+        return {"error": "Unauthorized"}
+
+    assert memory_manager
+    try:
+        results = await memory_manager.recall(request.query, top_k=request.top_k)
+        return {"success": True, "results": results, "count": len(results)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/memory/stats")
+async def memory_stats(
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    user = _get_current_user(authorization)
+    if not user:
+        return {"error": "Unauthorized"}
+
+    assert memory_manager
+    return {
+        "short_term": {
+            "messages": len(memory_manager.short_term.messages),
+            "has_summary": bool(memory_manager.short_term.summary),
+        },
+        "long_term": {
+            "entries": len(memory_manager.long_term._entries),
+            "collection": memory_manager.long_term.collection_name,
+        },
+        "working": {
+            "keys": list(memory_manager.working.scratchpad.keys()),
+        },
+    }
+
+
+@app.post("/memory/cleanup")
+async def memory_cleanup(
+    max_entries: int = 1000,
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    user = _get_current_user(authorization)
+    if not user:
+        return {"error": "Unauthorized"}
+
+    assert memory_manager
+    try:
+        removed = await memory_manager.cleanup_memory(max_entries)
+        return {"success": True, "removed": removed}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 def main() -> None:

@@ -79,9 +79,63 @@ class ShortTermMemory:
 
 
 class LongTermMemory:
-    def __init__(self, collection_name: str = "wyf-agent-memory") -> None:
+    def __init__(
+        self,
+        collection_name: str = "wyf-agent-memory",
+        persist_directory: str = "data/chroma",
+    ) -> None:
         self.collection_name = collection_name
+        self.persist_directory = persist_directory
         self._entries: dict[str, MemoryEntry] = {}
+        self._client = None
+        self._collection = None
+        self._init_chromadb()
+
+    def _init_chromadb(self) -> None:
+        try:
+            import chromadb
+            self._client = chromadb.PersistentClient(path=self.persist_directory)
+            self._collection = self._client.get_or_create_collection(
+                name=self.collection_name,
+                metadata={"hnsw:space": "cosine"},
+            )
+            self._load_from_chromadb()
+            logger.info(
+                "long_term_memory_initialized",
+                collection=self.collection_name,
+                count=len(self._entries),
+            )
+        except Exception as e:
+            logger.warning("chromadb_init_failed", error=str(e))
+            self._client = None
+            self._collection = None
+
+    def _load_from_chromadb(self) -> None:
+        if not self._collection:
+            return
+        try:
+            results = self._collection.get(include=["documents", "metadatas"])
+            if results and results["ids"]:
+                for id_, doc, meta in zip(
+                    results["ids"],
+                    results["documents"],
+                    results["metadatas"],
+                    strict=False,
+                ):
+                    if isinstance(meta, dict):
+                        self._entries[id_] = MemoryEntry(
+                            key=id_,
+                            content=doc,
+                            importance=meta.get("importance", 0.5),
+                            access_count=meta.get("access_count", 0),
+                            last_accessed=meta.get("last_accessed", time.time()),
+                            created_at=meta.get("created_at", time.time()),
+                            metadata={k: v for k, v in meta.items() if k not in {
+                                "importance", "access_count", "last_accessed", "created_at"
+                            }},
+                        )
+        except Exception as e:
+            logger.warning("load_from_chromadb_failed", error=str(e))
 
     async def store(
         self,
@@ -99,7 +153,7 @@ class LongTermMemory:
             entry.last_accessed = now
             entry.metadata.update(metadata or {})
         else:
-            self._entries[key] = MemoryEntry(
+            entry = MemoryEntry(
                 key=key,
                 content=content,
                 importance=importance,
@@ -108,16 +162,70 @@ class LongTermMemory:
                 created_at=now,
                 metadata=metadata or {},
             )
+            self._entries[key] = entry
+
+        if self._collection:
+            try:
+                chroma_metadata = {
+                    "importance": importance,
+                    "access_count": entry.access_count,
+                    "last_accessed": now,
+                    "created_at": entry.created_at,
+                    **(metadata or {}),
+                }
+                self._collection.upsert(
+                    ids=[key],
+                    documents=[content],
+                    metadatas=[chroma_metadata],
+                )
+            except Exception as e:
+                logger.warning("chromadb_store_failed", key=key, error=str(e))
+
         logger.info("long_term_store", key=key, importance=importance)
 
     async def retrieve(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
         if not self._entries:
             return []
 
+        results = []
+
+        if self._collection:
+            try:
+                chroma_results = self._collection.query(
+                    query_texts=[query],
+                    n_results=min(top_k, len(self._entries)),
+                    include=["documents", "metadatas", "distances"],
+                )
+                if chroma_results and chroma_results["ids"] and chroma_results["ids"][0]:
+                    for id_, doc, meta, dist in zip(
+                        chroma_results["ids"][0],
+                        chroma_results["documents"][0],
+                        chroma_results["metadatas"][0],
+                        chroma_results["distances"][0],
+                        strict=False,
+                    ):
+                        if id_ in self._entries:
+                            entry = self._entries[id_]
+                            entry.access_count += 1
+                            entry.last_accessed = time.time()
+                            results.append({
+                                "key": id_,
+                                "content": doc,
+                                "score": 1 - dist,
+                                "importance": meta.get("importance", 0.5),
+                                "access_count": entry.access_count,
+                                **{k: v for k, v in meta.items() if k not in {
+                                    "importance", "access_count", "last_accessed", "created_at"
+                                }},
+                            })
+                    return results[:top_k]
+            except Exception as e:
+                logger.warning("chromadb_retrieve_failed", error=str(e))
+
         now = time.time()
+        query_lower = query.lower()
         scored_entries: list[tuple[float, MemoryEntry]] = []
 
-        query_lower = query.lower()
         for entry in self._entries.values():
             content_lower = entry.content.lower()
             keyword_score = sum(1 for word in query_lower.split() if word in content_lower)
@@ -128,7 +236,6 @@ class LongTermMemory:
 
         scored_entries.sort(key=lambda x: x[0], reverse=True)
 
-        results = []
         for score, entry in scored_entries[:top_k]:
             entry.access_count += 1
             entry.last_accessed = now
@@ -145,6 +252,11 @@ class LongTermMemory:
 
     async def delete(self, key: str) -> None:
         self._entries.pop(key, None)
+        if self._collection:
+            try:
+                self._collection.delete(ids=[key])
+            except Exception as e:
+                logger.warning("chromadb_delete_failed", key=key, error=str(e))
 
     async def cleanup(self, max_entries: int = 1000) -> int:
         if len(self._entries) <= max_entries:
@@ -160,6 +272,11 @@ class LongTermMemory:
         removed = 0
         for _, key in entries_with_score[: len(self._entries) - max_entries]:
             del self._entries[key]
+            if self._collection:
+                try:
+                    self._collection.delete(ids=[key])
+                except Exception:
+                    pass
             removed += 1
 
         logger.info("memory_cleanup", removed=removed)
