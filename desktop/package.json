@@ -11,11 +11,15 @@
     "build": "cd src/renderer && npm run build && electron-builder",
     "build:win": "cd src/renderer && npm run build && electron-builder --win"
   },
-  "keywords": ["ai", "agent", "desktop"],
+  "keywords": [
+    "ai",
+    "agent",
+    "desktop"
+  ],
   "author": "WYF",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^33.0.0",
+    "electron": "^33.4.11",
     "electron-builder": "^25.0.0"
   },
   "dependencies": {
