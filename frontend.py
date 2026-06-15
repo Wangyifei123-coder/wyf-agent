@@ -327,25 +327,50 @@ if "username" not in st.session_state:
     st.session_state.username = None
 
 if not st.session_state.token:
-    st.title("WYF Agent 登录")
-    with st.form("login_form"):
-        username = st.text_input("用户名")
-        password = st.text_input("密码", type="password")
-        submitted = st.form_submit_button("登录", use_container_width=True)
-        if submitted:
-            result = call_api(
-                "/auth/login",
-                "POST",
-                {"username": username, "password": password},
-            )
-            if result.get("success"):
-                st.session_state.token = result["token"]
-                st.session_state.username = result["username"]
-                st.rerun()
-            else:
-                st.error(result.get("error", "登录失败"))
+    st.markdown(
+        """
+        <style>
+        .login-container {
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .login-title {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.info("演示账号: admin/admin123 或 user/user123")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown('<h2 class="login-title">WYF Agent 登录</h2>', unsafe_allow_html=True)
+        with st.form("login_form"):
+            username = st.text_input("用户名")
+            password = st.text_input("密码", type="password")
+            submitted = st.form_submit_button("登录", use_container_width=True)
+            if submitted:
+                result = call_api(
+                    "/auth/login",
+                    "POST",
+                    {"username": username, "password": password},
+                )
+                if result.get("success"):
+                    st.session_state.token = result["token"]
+                    st.session_state.username = result["username"]
+                    st.rerun()
+                else:
+                    st.error(result.get("error", "登录失败"))
+
+        st.info("演示账号: admin/admin123 或 user/user123")
     st.stop()
 
 with st.sidebar:
