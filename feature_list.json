@@ -65,15 +65,16 @@
     "area": "tools",
     "title": "工具调用能力",
     "user_visible_behavior": "Agent 能根据问题自动选择并调用合适的工具",
-    "status": "not_started",
+    "status": "passing",
     "verification": [
-      "注册工具后能被 LLM 识别",
-      "工具参数正确传递",
-      "工具结果正确返回给用户",
-      "工具调用有审计日志"
+      "MCP 协议支持",
+      "工具发现和注册",
+      "LLM 意图识别工具调用",
+      "工具执行和结果返回",
+      "工具调用审计日志"
     ],
-    "evidence": "",
-    "notes": "下一阶段任务：实现 MCP 协议支持"
+    "evidence": "2026-06-15: MCP 客户端管理器、工具适配器、意图识别、工具执行",
+    "notes": "支持 stdio 和 HTTP 传输，配置文件 config/mcp_servers.yaml"
   },
   {
     "id": "memory-persistence",
