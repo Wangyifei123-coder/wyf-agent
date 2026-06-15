@@ -50,6 +50,9 @@
   - 工具调用审计日志 ✅
   - JSON-RPC 2.0 统一消息格式 ✅
   - MCP Registry 自动发现和安装 ✅
+  - 5 个 MCP 服务器（test-tools, filesystem, database, search, api）✅
+  - 规则匹配 + 置信度判断 ✅
+  - OpenAI 原生 Function Calling ✅
 
 ## 本轮改动
 
