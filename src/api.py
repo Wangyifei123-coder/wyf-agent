@@ -37,6 +37,7 @@ from .rag.vectorstore import VectorStore
 from .reasoning.react import ReActEngine
 from .safety.auth import authenticate, verify_token
 from .safety.guard import SafetyGuard
+from .tools.mcp_manager import MCPManager
 from .tools.registry import ToolRegistry
 
 _env_path = Path(__file__).parent.parent / "config" / ".env"
@@ -53,6 +54,7 @@ tracer: Tracer | None = None
 rag_graph: RAGGraph | None = None
 vector_store: VectorStore | None = None
 hybrid_retriever: HybridRetriever | None = None
+mcp_manager: MCPManager | None = None
 
 EMOJI_PATTERN = re.compile(
     "["
@@ -78,7 +80,7 @@ def _strip_emoji(text: str) -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     global llm_client, react_engine, memory_manager, safety_guard
-    global tracer, rag_graph, vector_store, hybrid_retriever
+    global tracer, rag_graph, vector_store, hybrid_retriever, mcp_manager
 
     setup_logging(level=os.getenv("LOG_LEVEL", "INFO"), format="json")
 
@@ -95,6 +97,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     safety_guard = SafetyGuard()
     tracer = Tracer()
     tool_registry = ToolRegistry()
+
+    mcp_manager = MCPManager()
+    mcp_config_path = Path(__file__).parent.parent / "config" / "mcp_servers.yaml"
+    if mcp_config_path.exists():
+        try:
+            mcp_configs = MCPManager.load_config(str(mcp_config_path))
+            for cfg in mcp_configs:
+                await mcp_manager.connect_server(cfg)
+            from .tools.mcp_adapter import MCPToolAdapter
+            mcp_tools = [
+                MCPToolAdapter(t, mcp_manager)
+                for t in mcp_manager.get_all_tools()
+            ]
+            tool_registry.register_mcp_tools(mcp_tools)
+            logger.info("mcp_initialized", tools=len(mcp_tools))
+        except Exception as e:
+            logger.warning("mcp_init_failed", error=str(e))
 
     embedding_service = EmbeddingService()
     logger.info("prewarming_embedding_model")
@@ -462,6 +481,45 @@ async def ingest_url(request: IngestURLRequest) -> IngestURLResponse:
         images_extracted=images_count,
         status="success",
     )
+
+
+@app.get("/mcp/tools")
+async def mcp_tools() -> dict[str, Any]:
+    if not mcp_manager:
+        return {"tools": [], "count": 0}
+    tools = mcp_manager.get_all_tools()
+    return {"tools": tools, "count": len(tools)}
+
+
+@app.post("/mcp/call")
+async def mcp_call_tool(
+    request: dict[str, Any],
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    if not mcp_manager:
+        return {"error": "MCP not initialized"}
+
+    user = _get_current_user(authorization)
+    if not user:
+        return {"error": "Unauthorized"}
+
+    server = request.get("server")
+    tool = request.get("tool")
+    arguments = request.get("arguments", {})
+
+    if not server or not tool:
+        return {"error": "Missing server or tool parameter"}
+
+    try:
+        result = await mcp_manager.call_tool(server, tool, arguments)
+        content = []
+        if hasattr(result, 'content') and result.content:
+            for c in result.content:
+                if hasattr(c, 'text'):
+                    content.append({"type": "text", "text": c.text})
+        return {"success": True, "content": content}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 @app.get("/prometheus")

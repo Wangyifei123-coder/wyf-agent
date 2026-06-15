@@ -1,0 +1,23 @@
+# MCP 服务器配置
+# 文档: https://modelcontextprotocol.io
+
+servers:
+  # 文件系统服务器
+  - name: "filesystem"
+    transport: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "D:\\PythonProject\\my-agent\\wyf-agent"]
+    enabled: false
+
+  # 网页搜索服务器 (需要自定义实现)
+  # - name: "web-search"
+  #   transport: "http"
+  #   url: "http://localhost:8001/mcp"
+  #   enabled: false
+
+  # 数据库服务器 (需要自定义实现)
+  # - name: "database"
+  #   transport: "stdio"
+  #   command: "python"
+  #   args: ["mcp_servers/db_server.py"]
+  #   enabled: false

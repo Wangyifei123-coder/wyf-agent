@@ -50,6 +50,11 @@ class ToolRegistry:
         self._tools[name] = tool
         logger.info("tool_registered", tool=name, permissions=tool.schema.permissions)
 
+    def register_mcp_tools(self, mcp_tools: list[Tool]) -> None:
+        for tool in mcp_tools:
+            self.register(tool)
+        logger.info("mcp_tools_registered", count=len(mcp_tools))
+
     def get(self, name: str) -> Tool | None:
         return self._tools.get(name)
 
