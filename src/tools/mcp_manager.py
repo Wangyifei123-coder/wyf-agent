@@ -155,3 +155,11 @@ class MCPManager:
                     url=server.get("url"),
                 ))
         return configs
+
+    @staticmethod
+    def save_config(config_path: str, servers: list[dict[str, Any]]) -> None:
+        with open(config_path, "w", encoding="utf-8") as f:
+            yaml.dump({"servers": servers}, f, default_flow_style=False)
+
+    def get_connected_servers(self) -> list[str]:
+        return list(self._connections.keys())

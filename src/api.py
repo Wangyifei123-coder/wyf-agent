@@ -37,7 +37,8 @@ from .rag.vectorstore import VectorStore
 from .reasoning.react import ReActEngine
 from .safety.auth import authenticate, verify_token
 from .safety.guard import SafetyGuard
-from .tools.mcp_manager import MCPManager
+from .tools.mcp_manager import MCPManager, MCPServerConfig
+from .tools.mcp_registry import MCPRegistryClient
 from .tools.registry import ToolRegistry
 
 _env_path = Path(__file__).parent.parent / "config" / ".env"
@@ -55,6 +56,7 @@ rag_graph: RAGGraph | None = None
 vector_store: VectorStore | None = None
 hybrid_retriever: HybridRetriever | None = None
 mcp_manager: MCPManager | None = None
+mcp_registry: MCPRegistryClient | None = None
 
 EMOJI_PATTERN = re.compile(
     "["
@@ -80,7 +82,7 @@ def _strip_emoji(text: str) -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     global llm_client, react_engine, memory_manager, safety_guard
-    global tracer, rag_graph, vector_store, hybrid_retriever, mcp_manager
+    global tracer, rag_graph, vector_store, hybrid_retriever, mcp_manager, mcp_registry
 
     setup_logging(level=os.getenv("LOG_LEVEL", "INFO"), format="json")
 
@@ -99,6 +101,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     tool_registry = ToolRegistry()
 
     mcp_manager = MCPManager()
+    mcp_registry = MCPRegistryClient()
     mcp_config_path = Path(__file__).parent.parent / "config" / "mcp_servers.yaml"
     if mcp_config_path.exists():
         try:
@@ -561,6 +564,100 @@ async def mcp_tools() -> dict[str, Any]:
         return {"tools": [], "count": 0}
     tools = mcp_manager.get_all_tools()
     return {"tools": tools, "count": len(tools)}
+
+
+@app.get("/mcp/servers")
+async def mcp_servers() -> dict[str, Any]:
+    if not mcp_manager:
+        return {"servers": [], "count": 0}
+    servers = mcp_manager.get_connected_servers()
+    return {"servers": servers, "count": len(servers)}
+
+
+@app.get("/mcp/search")
+async def mcp_search(
+    q: str = "",
+    limit: int = 10,
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    if not mcp_registry:
+        return {"results": [], "count": 0}
+
+    user = _get_current_user(authorization)
+    if not user:
+        return {"error": "Unauthorized"}
+
+    if not q:
+        return {"results": [], "count": 0}
+
+    results = await mcp_registry.search(q, limit)
+    return {"results": results, "count": len(results)}
+
+
+class MCPInstallRequest(BaseModel):
+    name: str
+    transport: str = "stdio"
+    command: str = "npx"
+    args: list[str] = []
+
+
+@app.post("/mcp/install")
+async def mcp_install(
+    request: MCPInstallRequest,
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    if not mcp_manager:
+        return {"success": False, "error": "MCP not initialized"}
+
+    user = _get_current_user(authorization)
+    if not user:
+        return {"success": False, "error": "Unauthorized"}
+
+    config_path = Path(__file__).parent.parent / "config" / "mcp_servers.yaml"
+
+    try:
+        config = MCPServerConfig(
+            name=request.name,
+            transport=request.transport,
+            command=request.command,
+            args=request.args,
+        )
+
+        await mcp_manager.connect_server(config)
+
+        existing_configs = []
+        if config_path.exists():
+            existing_configs = MCPManager.load_config(str(config_path))
+
+        new_server = {
+            "name": request.name,
+            "transport": request.transport,
+            "command": request.command,
+            "args": request.args,
+            "enabled": True,
+        }
+
+        all_servers = [vars(c) for c in existing_configs] if existing_configs else []
+        all_servers.append(new_server)
+
+        MCPManager.save_config(str(config_path), all_servers)
+
+        from .tools.mcp_adapter import MCPToolAdapter
+        mcp_tools = [
+            MCPToolAdapter(t, mcp_manager)
+            for t in mcp_manager.get_all_tools()
+            if t.get("server") == request.name
+        ]
+
+        logger.info("mcp_server_installed", server=request.name, tools=len(mcp_tools))
+        return {
+            "success": True,
+            "server": request.name,
+            "tools_installed": len(mcp_tools),
+        }
+    except Exception as e:
+        logger.error("mcp_install_failed", server=request.name, error=str(e))
+        return {"success": False, "error": str(e)}
 
 
 @app.get("/prometheus")
