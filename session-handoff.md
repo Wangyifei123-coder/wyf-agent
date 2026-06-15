@@ -1,5 +1,79 @@
 # Session Handoff
 
+## 项目状态总结 (2026-06-16)
+
+### 完成度：9/10 功能 (90%) | 7.5/10 企业全流程 (75%)
+
+### 已完成功能
+
+| 功能 | 状态 | 测试 |
+|------|------|------|
+| 基础对话 | ✅ | 8 tests |
+| RAG 知识问答 | ✅ | 58 tests |
+| 多模态图片 | ✅ | - |
+| 网页入库 | ✅ | - |
+| 工具调用 | ✅ | 25 tests |
+| 记忆持久化 | ✅ | API测试 |
+| 安全过滤 | ✅ | 4 tests |
+| 推理引擎 | ✅ | API测试 |
+| 可观测性 | ⏳ | 部分完成 |
+| 桌面应用 | ✅ | - |
+| 测试体系 | ✅ | 103 tests |
+
+### 待办事项
+
+1. **可观测性补全**
+   - Trace 调用链集成到 chat/reasoning 流程
+   - Span 中记录 Token 用量和成本
+   - 日志自动注入 trace_id
+   - 错误率/延迟告警机制
+
+2. **Prompt 套件完善**
+   - Few-shot Examples
+   - Guardrails Prompt
+
+3. **桌面应用打包**
+   - electron-builder 配置
+
+### 启动命令
+
+```bash
+# 后端
+cd D:\PythonProject\my-agent\wyf-agent
+python -m uvicorn src.api:app --port 8081
+
+# 前端
+python -m streamlit run frontend.py --server.port 8501
+
+# 桌面应用
+cd desktop && npm start
+
+# 测试
+python -m pytest tests/ -v
+python evals/quick_test.py
+```
+
+### API 端点
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| /chat | POST | 对话 |
+| /chat/stream | POST | 流式对话 |
+| /reasoning | POST | 推理引擎 |
+| /memory/store | POST | 存储记忆 |
+| /memory/recall | POST | 检索记忆 |
+| /memory/stats | GET | 记忆统计 |
+| /knowledge/ingest | POST | 文档入库 |
+| /auth/login | POST | 登录 |
+| /health | GET | 健康检查 |
+
+### 登录账号
+
+- admin / admin123
+- user / user123
+
+---
+
 ## 当前已验证
 
 - 项目骨架已创建，7 层架构完整
