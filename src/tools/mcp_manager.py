@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
-from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator
+from contextlib import suppress
+from typing import Any
 
 import structlog
 import yaml
@@ -52,15 +51,11 @@ class MCPServerConnection:
 
     async def disconnect(self) -> None:
         if self.session:
-            try:
+            with suppress(Exception):
                 await self.session.__aexit__(None, None, None)
-            except Exception:
-                pass
         if self._context:
-            try:
+            with suppress(Exception):
                 await self._context.__aexit__(None, None, None)
-            except Exception:
-                pass
 
 
 class MCPManager:

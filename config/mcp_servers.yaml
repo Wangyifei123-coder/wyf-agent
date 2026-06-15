@@ -9,6 +9,27 @@ servers:
     args: ["mcp_servers/test_server.py"]
     enabled: true
 
+  # 数据库服务器 - SQLite 只读查询
+  - name: "database"
+    transport: "stdio"
+    command: "python"
+    args: ["mcp_servers/db_server.py"]
+    enabled: true
+
+  # 网页搜索服务器
+  - name: "search"
+    transport: "stdio"
+    command: "python"
+    args: ["mcp_servers/search_server.py"]
+    enabled: true
+
+  # HTTP API 服务器
+  - name: "api"
+    transport: "stdio"
+    command: "python"
+    args: ["mcp_servers/api_server.py"]
+    enabled: true
+
   # 文件系统服务器
   - name: "filesystem"
     transport: "stdio"

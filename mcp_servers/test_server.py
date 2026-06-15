@@ -24,10 +24,10 @@ def calculator(expression: str) -> str:
 
 @mcp.tool()
 def get_weather(city: str) -> str:
-    """获取城市天气信息（模拟）
+    """Get city weather info (simulated)
 
     Args:
-        city: 城市名称，如 "北京", "上海", "广州"
+        city: City name, e.g. "Beijing", "Shanghai", "Guangzhou"
     """
     weather_data = {
         "北京": "晴天，25°C，湿度 40%",

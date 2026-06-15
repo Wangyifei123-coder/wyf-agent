@@ -14,12 +14,20 @@ logger = structlog.get_logger(__name__)
 
 
 @dataclass
+class ToolCall:
+    id: str
+    function_name: str
+    arguments: str
+
+
+@dataclass
 class LLMResponse:
     content: str
     model: str
     usage: dict[str, int]
     latency_ms: float = 0.0
     finish_reason: str = "stop"
+    tool_calls: list[ToolCall] | None = None
 
 
 @dataclass
@@ -48,6 +56,7 @@ class LLMClient:
         model: str | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        tools: list[dict[str, object]] | None = None,
     ) -> LLMResponse:
         target_model = model or self.config.primary_model
         temp = temperature if temperature is not None else self.config.temperature
@@ -56,7 +65,7 @@ class LLMClient:
         for attempt in range(self.config.max_retries):
             try:
                 start = time.monotonic()
-                response = await self._call_model(target_model, messages, temp, tokens)
+                response = await self._call_model(target_model, messages, temp, tokens, tools=tools)
                 latency = (time.monotonic() - start) * 1000
 
                 self.token_counter.record(
@@ -100,6 +109,8 @@ class LLMClient:
         messages: list[dict[str, str]],
         temperature: float,
         max_tokens: int,
+        *,
+        tools: list[dict[str, object]] | None = None,
     ) -> LLMResponse:
         import litellm
 
@@ -114,18 +125,33 @@ class LLMClient:
             kwargs["api_base"] = self.config.api_base
         if self.config.api_key:
             kwargs["api_key"] = self.config.api_key
+        if tools:
+            kwargs["tools"] = tools
 
         response = await litellm.acompletion(**kwargs)
 
+        choice = response.choices[0]
+        tool_calls = None
+        if choice.message.tool_calls:
+            tool_calls = [
+                ToolCall(
+                    id=tc.id,
+                    function_name=tc.function.name,
+                    arguments=tc.function.arguments,
+                )
+                for tc in choice.message.tool_calls
+            ]
+
         return LLMResponse(
-            content=response.choices[0].message.content or "",
+            content=choice.message.content or "",
             model=response.model,
             usage={
                 "prompt_tokens": response.usage.prompt_tokens,
                 "completion_tokens": response.usage.completion_tokens,
                 "total_tokens": response.usage.total_tokens,
             },
-            finish_reason=response.choices[0].finish_reason or "stop",
+            finish_reason=choice.finish_reason or "stop",
+            tool_calls=tool_calls,
         )
 
     async def stream_chat(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import enum
+import re
 import time
 from typing import Any, TypedDict
 
@@ -24,6 +25,20 @@ CHITCHAT_KEYWORDS = frozenset([
     "你好", "hi", "hello", "嗨", "谢谢", "感谢", "bye", "再见",
     "你是谁", "介绍", "早上好", "晚安", "ok", "好的",
 ])
+
+MATH_PATTERN = re.compile(
+    r'(?:计算|算|求|多少|等于|结果)[\s:：]*'
+    r'[\d\.\s\+\-\*\/\(\)\（\）\%\^]+'
+    r'|[\d\.\s\+\-\*\/\(\)\（\）\%\^]{3,}'
+    r'|(?:加|减|乘|除|除以|乘以|加上|减去)[\s]*[\d\.]+'
+)
+
+WEATHER_KEYWORDS = frozenset([
+    "天气", "气温", "温度", "下雨", "下雪", "晴天", "阴天",
+    "weather", "forecast", "今天天气", "明天天气",
+])
+
+TOOL_CALL_CONFIDENCE_THRESHOLD = 0.7
 
 
 class Intent(enum.Enum):
@@ -248,53 +263,147 @@ class RAGGraph:
         if not tools:
             return None
 
-        tool_prompt = f"""判断用户问题是否需要调用工具。
+        direct_match = self._match_tool_by_rules(query, tools)
+        if direct_match:
+            tool_name = direct_match["name"]
+            confidence = direct_match.get("confidence", 1.0)
+            logger.info("tool_matched_by_rules", tool=tool_name, confidence=confidence)
+            return direct_match
+
+        tool_prompt = f"""你是一个工具调用决策器。判断用户问题是否需要调用工具。
 
 可用工具:
 {self._format_tools_for_prompt(tools)}
 
-判断规则:
-1. 如果用户要求计算数学表达式（如 "计算 1+2"、"123*456"），使用 mcp_test-tools_calculator 工具
-2. 如果用户询问天气（如 "北京天气"、"上海今天天气"），使用 mcp_test-tools_get_weather 工具
-3. 如果用户要求统计文本（如 "统计字数"、"字符数"），使用 mcp_test-tools_text_count 工具
-4. 如果问题可以用工具解决，优先使用工具
-5. 如果是闲聊、问答、知识查询等，不需要调用工具
+【重要规则】
+1. 任何数学计算、算术表达式、数字运算都必须使用工具，禁止自行计算
+2. 天气查询必须使用工具
+3. 文本统计必须使用工具
+4. 工具调用优先级高于自行回答
+
+【判断示例】
+- "计算 123 * 456" → 必须调用计算器工具
+- "100 + 200 等于多少" → 必须调用计算器工具
+- "北京天气" → 必须调用天气工具
+- "统计这段话的字数" → 必须调用文本统计工具
+- "你好" → 不需要工具
+- "什么是Python" → 不需要工具
 
 用户问题: {query}
 
 返回 JSON:
-如果需要调用工具: {{"need_tool": true, "tool_name": "完整的工具名", "arguments": {{"参数名": "参数值"}}}}
+如果需要调用工具:
+{{"need_tool": true, "tool_name": "工具名", "arguments": {{"参数名": "参数值"}}}}
 如果不需要: {{"need_tool": false}}
 
-只返回 JSON:"""
+只返回 JSON，不要解释:"""
 
         try:
             response = await self.llm.chat([{"role": "user", "content": tool_prompt}])
             import json
             result = json.loads(response.content.strip())
-            if result.get("need_tool"):
+            confidence = result.get("confidence", 0.8)
+            if result.get("need_tool") and confidence >= TOOL_CALL_CONFIDENCE_THRESHOLD:
+                tool_name = result.get("tool_name")
+                logger.info("tool_matched_by_llm", tool=tool_name, confidence=confidence)
                 return {
                     "name": result.get("tool_name", ""),
                     "arguments": result.get("arguments", {}),
+                    "confidence": confidence,
                 }
         except Exception as e:
             logger.warning("tool_check_failed", error=str(e))
 
         return None
 
+    def _match_tool_by_rules(
+        self, query: str, tools: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
+        normalized = query.strip().lower()
+        tool_names = [t.get("function", {}).get("name", "") for t in tools]
+
+        if MATH_PATTERN.search(normalized):
+            calculator_tool = next((n for n in tool_names if "calc" in n.lower()), None)
+            if calculator_tool:
+                expression = self._extract_math_expression(query)
+                if expression:
+                    return {
+                        "name": calculator_tool,
+                        "arguments": {"expression": expression},
+                        "confidence": 0.95,
+                    }
+
+        if any(kw in normalized for kw in WEATHER_KEYWORDS):
+            weather_tool = next((n for n in tool_names if "weather" in n.lower()), None)
+            if weather_tool:
+                city = self._extract_city(query)
+                if city:
+                    return {
+                        "name": weather_tool,
+                        "arguments": {"city": city},
+                        "confidence": 0.95,
+                    }
+
+        return None
+
+    def _extract_math_expression(self, query: str) -> str | None:
+        patterns = [
+            r'(?:计算|算|求|多少|等于|结果)[\s:：]*(.+?)(?:[？?]|$)',
+            r'([\d\.\s\+\-\*\/\(\)\（\）]+)',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, query)
+            if match:
+                expr = match.group(1).strip()
+                expr = re.sub(r'[？?。.]$', '', expr)
+                if any(op in expr for op in ['+', '-', '*', '/', '(', '（']):
+                    return expr
+
+        cn_map = {
+            '加': '+', '减': '-', '乘': '*', '除': '/',
+            '乘以': '*', '除以': '/', '加上': '+', '减去': '-'
+        }
+        for cn, op in cn_map.items():
+            if cn in query:
+                nums = re.findall(r'[\d\.]+', query)
+                if len(nums) >= 2:
+                    return f"{nums[0]}{op}{nums[1]}"
+        return None
+
+    def _extract_city(self, query: str) -> str | None:
+        patterns = [
+            r'(?:查询|查|告诉我|看看)?(?:今天|明天|现在)?([\u4e00-\u9fa5]{2,4}?)(?:今天|明天|现在|的)?(?:会|要|有)?(?:天气|气温|温度|下雨|下雪|晴天|阴天)',
+        ]
+
+        stop_words = {
+            "查询", "查", "告诉", "看看", "今天", "明天", "现在",
+            "天气", "气温", "温度", "下雨", "下雪", "会", "要", "有", "晴天", "阴天",
+        }
+
+        for pattern in patterns:
+            match = re.search(pattern, query)
+            if match:
+                city = match.group(1)
+                if city not in stop_words and len(city) >= 2:
+                    return city
+        return None
+
     def _format_tools_for_prompt(self, tools: list[dict[str, Any]]) -> str:
         lines = []
-        for tool in tools:
+        for i, tool in enumerate(tools, 1):
             func = tool.get("function", {})
             name = func.get("name", "")
             desc = func.get("description", "")
             params = func.get("parameters", {})
-            lines.append(f"- {name}: {desc}")
+            lines.append(f"{i}. 工具名称: {name}")
+            lines.append(f"   用途: {desc}")
             if params.get("properties"):
+                lines.append("   参数:")
                 for pname, pinfo in params["properties"].items():
                     ptype = pinfo.get('type', 'string')
                     pdesc = pinfo.get('description', '')
-                    lines.append(f"  - {pname}: {ptype} - {pdesc}")
+                    lines.append(f"     - {pname} ({ptype}): {pdesc}")
+            lines.append("")
         return "\n".join(lines)
 
     async def _rewrite_query(self, state: RAGState) -> dict[str, Any]:

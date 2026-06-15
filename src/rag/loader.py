@@ -62,7 +62,7 @@ def load_pdf(path: str) -> Document:
     if pages_to_ocr:
         logger.info("pdf_ocr_needed", path=path, pages=pages_to_ocr)
         ocr_text = _ocr_pdf_pages(path, pages_to_ocr)
-        for i, text in zip(pages_to_ocr, ocr_text):
+        for i, text in zip(pages_to_ocr, ocr_text, strict=False):
             pages_text.insert(i, text)
 
     text = "\n".join(pages_text)
