@@ -144,6 +144,7 @@ class LongTermMemory:
         importance: float = 0.5,
         metadata: dict[str, Any] | None = None,
     ) -> None:
+        import asyncio
         now = time.time()
         if key in self._entries:
             entry = self._entries[key]
@@ -173,17 +174,27 @@ class LongTermMemory:
                     "created_at": entry.created_at,
                     **(metadata or {}),
                 }
-                self._collection.upsert(
-                    ids=[key],
-                    documents=[content],
-                    metadatas=[chroma_metadata],
+                await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(
+                        None,
+                        lambda: self._collection.upsert(
+                            ids=[key],
+                            documents=[content],
+                            metadatas=[chroma_metadata],
+                        )
+                    ),
+                    timeout=10.0
                 )
+                logger.info("chromadb_store_success", key=key)
+            except asyncio.TimeoutError:
+                logger.warning("chromadb_store_timeout", key=key)
             except Exception as e:
                 logger.warning("chromadb_store_failed", key=key, error=str(e))
 
         logger.info("long_term_store", key=key, importance=importance)
 
     async def retrieve(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
+        import asyncio
         if not self._entries:
             return []
 
@@ -191,10 +202,16 @@ class LongTermMemory:
 
         if self._collection:
             try:
-                chroma_results = self._collection.query(
-                    query_texts=[query],
-                    n_results=min(top_k, len(self._entries)),
-                    include=["documents", "metadatas", "distances"],
+                chroma_results = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(
+                        None,
+                        lambda: self._collection.query(
+                            query_texts=[query],
+                            n_results=min(top_k, len(self._entries)),
+                            include=["documents", "metadatas", "distances"],
+                        )
+                    ),
+                    timeout=10.0
                 )
                 if chroma_results and chroma_results["ids"] and chroma_results["ids"][0]:
                     for id_, doc, meta, dist in zip(
@@ -219,6 +236,8 @@ class LongTermMemory:
                                 }},
                             })
                     return results[:top_k]
+            except asyncio.TimeoutError:
+                logger.warning("chromadb_retrieve_timeout")
             except Exception as e:
                 logger.warning("chromadb_retrieve_failed", error=str(e))
 

@@ -832,7 +832,9 @@ async def memory_store(
     if not user:
         return {"error": "Unauthorized"}
 
-    assert memory_manager
+    if not memory_manager:
+        return {"success": False, "error": "Memory manager not initialized"}
+
     try:
         await memory_manager.remember(
             key=request.key,
@@ -842,6 +844,7 @@ async def memory_store(
         )
         return {"success": True, "key": request.key}
     except Exception as e:
+        logger.error("memory_store_error", error=str(e))
         return {"success": False, "error": str(e)}
 
 
@@ -854,11 +857,14 @@ async def memory_recall(
     if not user:
         return {"error": "Unauthorized"}
 
-    assert memory_manager
+    if not memory_manager:
+        return {"success": False, "error": "Memory manager not initialized"}
+
     try:
         results = await memory_manager.recall(request.query, top_k=request.top_k)
         return {"success": True, "results": results, "count": len(results)}
     except Exception as e:
+        logger.error("memory_recall_error", error=str(e))
         return {"success": False, "error": str(e)}
 
 
