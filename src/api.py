@@ -483,43 +483,84 @@ async def ingest_url(request: IngestURLRequest) -> IngestURLResponse:
     )
 
 
+class JsonRpcRequest(BaseModel):
+    jsonrpc: str = "2.0"
+    method: str
+    params: dict[str, Any] | None = None
+    id: int | str | None = None
+
+
+class JsonRpcResponse(BaseModel):
+    jsonrpc: str = "2.0"
+    result: Any = None
+    error: dict[str, Any] | None = None
+    id: int | str | None = None
+
+
+@app.post("/mcp")
+async def mcp_jsonrpc(
+    request: JsonRpcRequest,
+    authorization: str | None = Header(None),
+) -> JsonRpcResponse:
+    if not mcp_manager:
+        return JsonRpcResponse(
+            id=request.id,
+            error={"code": -32603, "message": "MCP not initialized"},
+        )
+
+    user = _get_current_user(authorization)
+    if not user:
+        return JsonRpcResponse(
+            id=request.id,
+            error={"code": -32600, "message": "Unauthorized"},
+        )
+
+    method = request.method
+    params = request.params or {}
+
+    try:
+        if method == "tools/list":
+            tools = mcp_manager.get_all_tools()
+            return JsonRpcResponse(id=request.id, result={"tools": tools})
+
+        elif method == "tools/call":
+            server = params.get("server")
+            tool_name = params.get("name")
+            arguments = params.get("arguments", {})
+
+            if not server or not tool_name:
+                return JsonRpcResponse(
+                    id=request.id,
+                    error={"code": -32602, "message": "Missing server or tool name"},
+                )
+
+            result = await mcp_manager.call_tool(server, tool_name, arguments)
+            content = []
+            if hasattr(result, "content") and result.content:
+                for c in result.content:
+                    if hasattr(c, "text"):
+                        content.append({"type": "text", "text": c.text})
+            return JsonRpcResponse(id=request.id, result={"content": content})
+
+        else:
+            return JsonRpcResponse(
+                id=request.id,
+                error={"code": -32601, "message": f"Method not found: {method}"},
+            )
+
+    except Exception as e:
+        return JsonRpcResponse(
+            id=request.id,
+            error={"code": -32603, "message": str(e)},
+        )
+
+
 @app.get("/mcp/tools")
 async def mcp_tools() -> dict[str, Any]:
     if not mcp_manager:
         return {"tools": [], "count": 0}
     tools = mcp_manager.get_all_tools()
     return {"tools": tools, "count": len(tools)}
-
-
-@app.post("/mcp/call")
-async def mcp_call_tool(
-    request: dict[str, Any],
-    authorization: str | None = Header(None),
-) -> dict[str, Any]:
-    if not mcp_manager:
-        return {"error": "MCP not initialized"}
-
-    user = _get_current_user(authorization)
-    if not user:
-        return {"error": "Unauthorized"}
-
-    server = request.get("server")
-    tool = request.get("tool")
-    arguments = request.get("arguments", {})
-
-    if not server or not tool:
-        return {"error": "Missing server or tool parameter"}
-
-    try:
-        result = await mcp_manager.call_tool(server, tool, arguments)
-        content = []
-        if hasattr(result, 'content') and result.content:
-            for c in result.content:
-                if hasattr(c, 'text'):
-                    content.append({"type": "text", "text": c.text})
-        return {"success": True, "content": content}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
 
 
 @app.get("/prometheus")
